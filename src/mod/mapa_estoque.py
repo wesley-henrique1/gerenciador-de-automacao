@@ -72,6 +72,10 @@ class MapaEstoque(auxiliar):
                 ,names= [ColNames.Geral[i] for i in indices]
                 ,sep=','
             )   
+            print(base_geral.columns)
+            print(base_geral.info())
+            print(base_geral.head())
+            
             R_8596 = pd.read_excel(
                 self.list_path[1]
                 ,usecols= ['CODPROD',"RUA", 'ALTURAARM', 'QTUNITCX', "QTTOTPAL"]
@@ -84,6 +88,9 @@ class MapaEstoque(auxiliar):
             return False
         try:
             self.Instancia.stageTime('Transform')
+            base_geral['QTDE'] = base_geral['QTDE'].astype(str).str.replace('.', '').str.replace(',', '.').astype(float)
+            base_geral['DISP_'] = base_geral['DISP_'].astype(str).str.replace('.', '').str.replace(',', '.').astype(float)
+
             aereos_1707 = base_geral.loc[(base_geral['TIPO_END'] == "AE") & (~base_geral['RUA'].isin(self.VIRTUAIS))].copy()
             R_8596 = R_8596.loc[~R_8596['RUA'].isin(self.VIRTUAIS)]
             prod = R_8596.rename(columns= {

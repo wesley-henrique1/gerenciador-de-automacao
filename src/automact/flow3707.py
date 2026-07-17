@@ -128,7 +128,6 @@ class Flow3707:
                 )
 
                 pc.copy(codprod)
-                pag.sleep(0.02)
                 tentativas_prod = 0
                 while pc.paste() != str(codprod) and tentativas_prod < 5:
                     pag.sleep(0.1)
@@ -139,11 +138,10 @@ class Flow3707:
 
                 pag.hotkey("ctrl", "v")
                 pag.press('enter')
-                pag.sleep(1)
+                pag.sleep(0.5)
                 if not self.em_execucao: break
 
                 pc.copy(codend)
-                pag.sleep(0.05)                
                 tentativas_end = 0
                 while pc.paste() != str(codend) and tentativas_end < 5:
                     pag.sleep(0.1)
@@ -154,10 +152,10 @@ class Flow3707:
 
 
                 pag.hotkey("ctrl", "v")
-                pag.sleep(0.02)
+                pag.sleep(0.5)
 
                 for _ in range(3):
-                    pag.sleep(0.02)  
+                    pag.sleep(0.5)  
                     pag.press('enter')
                 
                 if not self.em_execucao: break
@@ -169,7 +167,7 @@ class Flow3707:
                     ,cod=codprod
                     ,end=codend
                 )
-                pag.sleep(0.5)  
+                pag.sleep(1)  
                 lista_bool.append(codprod)
 
                 pass
@@ -208,7 +206,7 @@ class Flow3707:
             self.AncoraCodEnd.delete("1.0", tk.END)
             self.AncoraLogUI.config(text=self.text_logUI)
 
-            if self._tratar(list_prod= list_prod, list_end= list_end):
+            if self.em_execucao:
                 TT_PROD = self._tratar(list_prod= list_prod, list_end= list_end)
             else:
                 return
