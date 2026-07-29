@@ -4,10 +4,10 @@
         ,"Relatorio Abastecimento"
         ,"Relatório de Performance do Recebimento"
         ,"Contagem de etiquetas"
+        ,"Relatorio Giro dia"
     ],
     "3":[
-        "FEFO: itens curva A"
-        ,"Relatorio Corte"
+        "Relatorio Corte"
         ,"Relatorio Abastecimento"
         ,"Mapeamento Aereos"
         ,"Relatorio de O.S Mensal"
@@ -17,20 +17,17 @@
     "4":[
         "RELATORIO: CORTE"
         ,"RELATORIO: ABASTECIMENTO"
-        ,"FEFO: ANÁLISE 'CURVA DE SHELF'"
         ,"CADASTRO: CUBAGEM"
     ],
     "5":[
         "RELATORIO: CORTE"
         ,"RELATORIO: ABASTECIMENTO"
-        ,"FEFO:(Aereo X Piking 8668)"
         ,"CADASTRO: CORREÇÃO"
         ,"INVENTARIO: ESTOQUE PARADO"
     ],
     "6":[
         "RELATORIO: CORTE"
         ,"RELATORIO: ABASTECIMENTO"
-        ,"FEFO: AEREO MENOR QUE PICKING"
         ,"CADASTRO: CORREÇÃO"
         ,"INVENTARIO: ACURACIDADE"
     ]

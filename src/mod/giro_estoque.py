@@ -1,5 +1,5 @@
-from ..lib.settings import Relatorios, Gestao, Filial_18, Wms, ColNames, OutPut
-from ..lib import ValidarErros, MonitorETL
+from ..lib.settings import Relatorios, Filial_18, Wms, ColNames, OutPut
+from ..lib import ValidarErros, MonitorETL, Tratar286
 
 import pandas as pd
 import numpy as np
@@ -16,12 +16,11 @@ class GiroEstoque:
         self.VIRTUAIS = [0,60, 70, 80, 100, 106, 44]
 
         self.list_path = [
-            Relatorios._8596, Gestao._286
-            ,Filial_18._8596, Filial_18._286
-            ,Wms.endereco07
+            Relatorios._8596,Filial_18._8596,Wms.endereco07
         ]
         self.Retorno = [OutPut.GiroStatus]
         self.Instancia = MonitorETL()
+        self.Instancia286 = Tratar286.BaseDados286()
         pass
     def pipeline(self):
         try:
@@ -29,20 +28,14 @@ class GiroEstoque:
             col_8596 = [
                 'DTULTENT', 'DTULTSAIDA', 'CODPROD', 'DESCRICAO', 'OBS2', 'QTUNITCX', 'RUA', 'PREDIO', 'NIVEL', 'APTO','QTESTGER'
             ]
-            col_286= [
-                'Código', 'Estoque', 'Bloqueado(Qt.Bloq.-Qt.Avaria)', 'Qt.Avaria','Reservado', 'Disponível', 'Custo ult. ent.', 'Comprador'
-            ]
 
             col_1707 = [5,13]
             _col_ = ColNames.Endereco
 
-            dados_F11 = pd.read_excel(self.list_path[0], usecols= col_8596)
-            aux_286_F11 = pd.read_excel(self.list_path[1], usecols= col_286)
-            
-            dados_F18 = pd.read_excel(self.list_path[2], usecols= col_8596)
-            aux_286_F18 = pd.read_excel(self.list_path[3], usecols= col_286)
-
-            aux_1707 = pd.read_csv(self.list_path[4], header= None, usecols= col_1707, names=[_col_[5], _col_[13]])
+            dados_F11 = pd.read_excel(self.list_path[0], usecols= col_8596)            
+            dados_F18 = pd.read_excel(self.list_path[1], usecols= col_8596)
+            aux_1707 = pd.read_csv(self.list_path[2], header= None, usecols= col_1707, names=[_col_[5], _col_[13]])
+            df_estoque = self.Instancia286.Pipeline(colcheck= ['Custo ult. ent.', 'Reservado', 'Comprador'])
             
             self.Instancia.stageTime('Extract')
         except Exception as e:
@@ -51,13 +44,8 @@ class GiroEstoque:
         try:
             self.Instancia.stageTime('Transform')
             try:
-                df_estoque = aux_286_F11.merge(aux_286_F18, on= 'Código', how= 'outer').fillna(0)
-                df_estoque = df_estoque.rename(columns={'Código': "CODPROD"})
                 col_zero = [
-                    'Estoque_x', 'Estoque_y'
-                    ,'Bloqueado(Qt.Bloq.-Qt.Avaria)_x', 'Bloqueado(Qt.Bloq.-Qt.Avaria)_y'
-                    ,'Qt.Avaria_x', 'Qt.Avaria_y'
-                    ,'Custo ult. ent._x', 'Custo ult. ent._y'
+                    'Custo ult. ent._x', 'Custo ult. ent._y'
                     ,'Reservado_x','Reservado_y'
                 ]
                 for col in col_zero:
@@ -106,28 +94,16 @@ class GiroEstoque:
                     ,nomes_separados.str[0] + " " + nomes_separados.str[-1]
                     ,nomes_separados.str[0]        
                 )
-                df_estoque['CODPROD'] = pd.to_numeric(df_estoque['CODPROD']).astype(int)
-                df_estoque["ESTOQUE"] = df_estoque["Estoque_x"] + df_estoque["Estoque_y"]
-                df_estoque["BLOQ"] = df_estoque["Bloqueado(Qt.Bloq.-Qt.Avaria)_x"] + df_estoque["Bloqueado(Qt.Bloq.-Qt.Avaria)_y"]
-                df_estoque["AVARIA"] = df_estoque["Qt.Avaria_x"] + df_estoque["Qt.Avaria_y"]
                 df_estoque['RESERVADO'] = round(df_estoque['Reservado_x'] + df_estoque['Reservado_y'])
-
-                df_estoque["TOTAL_BLOQ"] = df_estoque["BLOQ"] + df_estoque["AVARIA"]
-                df_estoque['DISP'] = df_estoque["ESTOQUE"] - df_estoque["TOTAL_BLOQ"]
-                df_estoque['CUSTO_EST'] = round(df_estoque["CUSTO"] * df_estoque["DISP"], 2)
+                df_estoque['CUSTO_EST'] = round(df_estoque["CUSTO"] * df_estoque["DISPONIVEL"], 2)
                 df_estoque['_RESERVA_'] = np.where(
                     df_estoque['RESERVADO'] > 0
                     ,"S"
                     ,"N"
                 )
                 
-                drop_x = ["Qt.Avaria_x","Reservado_x","Disponível_x","Custo ult. ent._x"
-                        ,"Comprador_x"
-                        ,"Bloqueado(Qt.Bloq.-Qt.Avaria)_x", "Estoque_x"
-                ]
-                drop_y = ["Qt.Avaria_y","Reservado_y","Disponível_y","Custo ult. ent._y"
-                        ,"Comprador_y"
-                        ,"Bloqueado(Qt.Bloq.-Qt.Avaria)_y", "Estoque_y"]
+                drop_x = ["Reservado_x","Custo ult. ent._x","Comprador_x"]
+                drop_y = ["Reservado_y","Custo ult. ent._y","Comprador_y"]
                 df_estoque = df_estoque.drop(columns= drop_x + drop_y)
                 pass
             except Exception as e:
@@ -184,9 +160,9 @@ class GiroEstoque:
             df_completo = dados_prod.merge(df_estoque, on='CODPROD', how='left')
 
             bloq_quest = [
-                (df_completo['TOTAL_BLOQ'] > 0) & (df_completo['DISP'] == 0)
-                ,(df_completo['TOTAL_BLOQ'] > 0) & (df_completo['DISP'] > 0)
-                ,(df_completo['TOTAL_BLOQ'] == 0) & (df_completo['DISP'] > 0)
+                (df_completo['TOTALBLOQ'] > 0) & (df_completo['DISPONIVEL'] == 0)
+                ,(df_completo['TOTALBLOQ'] > 0) & (df_completo['DISPONIVEL'] > 0)
+                ,(df_completo['TOTALBLOQ'] == 0) & (df_completo['DISPONIVEL'] > 0)
             ]
             bloq_result = [
                 "TOTAL"
@@ -195,8 +171,8 @@ class GiroEstoque:
             ]
 
             categoria_cond = [
-                (df_completo['DIAS_S'] > 30) & (df_completo['DIAS_E'] > 30) & (df_completo['DISP'] > 0) 
-                ,df_completo['DISP'] > 0
+                (df_completo['DIAS_S'] > 30) & (df_completo['DIAS_E'] > 30) & (df_completo['DISPONIVEL'] > 0) 
+                ,df_completo['DISPONIVEL'] > 0
                 ,df_completo['ESTOQUE'] == 0
             ]
             categoria_result = [
@@ -234,6 +210,8 @@ class GiroEstoque:
         
     def carregamento(self, validar):
         lista_de_logs = []
+        valor = self.Instancia286.RetornoBase()
+        self.list_path.extend(valor)
         try:
             if not validar:
                 return
@@ -275,6 +253,7 @@ class GiroEstoque:
                     "DATA": data_formatada,
                     "HORA": horas_formatada
                 }
+                
                 ListaOutPut.append(Dicionario)
             return ListaOutPut, path
         except Exception as e:

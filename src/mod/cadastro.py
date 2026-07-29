@@ -6,7 +6,11 @@ import pandas as pd
 import numpy as np
 import os
 import re
-
+"""
+    Sigla Produto, validar as sigla dos produtos se ele e UN ou PT e se esta de acordo com a sigla imposta 
+    UN/001/UN -> UN | CX/012/UN -> CX
+    V_SIGLA
+"""
 class auxiliar:
     def extrair_e_converter_peso(self,argumento):
         match = re.search(r'([\d\.,]+)\s*(KG|GR)', str(argumento), re.IGNORECASE)
@@ -22,7 +26,7 @@ class auxiliar:
 class Cadastro(auxiliar):
     validador = ValidarErros(fonte="Cadastro")
     def __init__(self):
-        locWEB = r'z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\Wesley Henrique\CalibragemWeb.xlsx'
+        locWEB = r'z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\WebCalibragem.xlsx'
         self.list_path = [Relatorios._8596, BaseDados.EndFixo, locWEB]
         self.Retorno = [OutPut.Cadastro]
         self.chekout = [27, 28, 29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 44]
@@ -62,6 +66,10 @@ class Cadastro(auxiliar):
                 ,"CARACTERISTICA"
                 ,"APTO"
                 ,"TIPO_1"
+                ,'EMBALAGEMMASTER'
+                ,'UNIDADEMASTER'
+                ,'EMBALAGEM'
+                ,'UNIDADE'
             ]
             dados_prod = pd.read_excel(self.list_path[0], usecols= colunas_origem)
             endereco = pd.read_excel(self.list_path[1], sheet_name= 'STATUS', usecols= ["RUA", "TIPO_RUA", "CARACT"])
@@ -79,19 +87,15 @@ class Cadastro(auxiliar):
             TEMP = TEMP.merge(dadosWEB, left_on= 'CODPROD', right_on= 'CODWEB', how= 'left')
             df_prod = TEMP.loc[TEMP['RUA'].between(1,39)].copy()
             dic_raname = {
-                'ABASTECEPALETE' : 'FLEG_ABST'
-                ,'CAPACIDADE' : 'CAP'
-                ,'PONTOREPOSICAO' : 'P_REP'
-                ,'QTUNITCX' : 'FATOR'
-                ,'QTTOTPAL': 'PL'
-            }
+                'ABASTECEPALETE' : 'FLEG_ABST','CAPACIDADE' : 'CAP','PONTOREPOSICAO' : 'P_REP','QTUNITCX' : 'FATOR','QTTOTPAL': 'PL'}
             df_PRODUTO = df_prod.rename(columns=dic_raname)
+            df_PRODUTO['OBS2'] = df_prod['OBS2'].fillna("ATIVO")
             df_PRODUTO['TESTE'] = df_PRODUTO['RUA'].astype(str) + " - " + df_PRODUTO['PREDIO'].astype(str)
             filtro = (df_PRODUTO['APTO'].between(100, 199)) & (df_PRODUTO['PK_END'].isin(self.list_meio))
 
             try:
                 df_PRODUTO.loc[filtro, 'qt_meio'] = df_PRODUTO[filtro].groupby('TESTE')['TESTE'].transform('count')
-                df_PRODUTO['FREQ_PROD'] = df_PRODUTO['TESTE'].map(df_PRODUTO['TESTE'].value_counts())
+                df_PRODUTO['QTEnd'] = df_PRODUTO['TESTE'].map(df_PRODUTO['TESTE'].value_counts())
 
                 df_PRODUTO['AREA_LT'] = round((df_PRODUTO['LARGURAARM'] * df_PRODUTO['COMPRIMENTOARM']) * df_PRODUTO['LASTROPAL'],0)
                 df_PRODUTO['VolumeFRAC'] = df_PRODUTO['ALTURAM3'] * df_PRODUTO['LARGURAM3'] * df_PRODUTO['COMPRIMENTOM3']
@@ -101,58 +105,69 @@ class Cadastro(auxiliar):
                 df_PRODUTO['PL_LASTRO'] = df_PRODUTO['PL'] + df_PRODUTO['LASTROPAL']
 
                 df_PRODUTO['ALTPL'] = df_PRODUTO['ALTURAARM'] * df_PRODUTO['ALTURAPAL']
-                df_PRODUTO['V_ALTPL'] = np.where(
+                df_PRODUTO['ALTPL'] = np.where(
                     ((df_PRODUTO['ALTPL'] + df_PRODUTO['ALTURAARM']) < self.alturaPK) & (df_PRODUTO['MED_VENDA_DIAS_CX'] <= df_PRODUTO['LASTROPAL'])
                     ,"ABAIXO"
                     ,"ACIMA"
                 )
+                df_PRODUTO['SPLIT_UN'] = df_PRODUTO['EMBALAGEM'].astype(str).str.split("/", expand=True)[0]
+                df_PRODUTO['Split_CX'] = df_PRODUTO['EMBALAGEMMASTER'].astype(str).str.split("/", expand= True)[0]
             except Exception as e:
                 self.validador.registrar_log(e, "T-SUPORTE")
             try:
-                INT = (df_PRODUTO['FREQ_PROD'] <= 2) & (df_PRODUTO['PK_END'].isin(self.list_int))
+                INT = (df_PRODUTO['QTEnd'] <= 2) & (df_PRODUTO['PK_END'].isin(self.list_int))
                 MEIO =(df_PRODUTO['qt_meio'] <= 2) & (df_PRODUTO['PK_END'].isin(self.list_meio))
-                DIV = (df_PRODUTO['FREQ_PROD'] > 2)
+                DIV = (df_PRODUTO['QTEnd'] > 2)
                 cond_status = [INT, MEIO, DIV]
                 escolha_STATUS = ["INT","MEIO", "DIV"]
-                df_PRODUTO['STATUS_PK'] = np.select(
+                df_PRODUTO['TIPOPK'] = np.select(
                     cond_status
                     ,escolha_STATUS
                     ,default="VAL"
                 )
+                
+                "Condição das siglas"
+                valAmbas = (df_PRODUTO['Split_CX'] != df_PRODUTO['UNIDADEMASTER']) & (df_PRODUTO['SPLIT_UN'] != df_PRODUTO['UNIDADE'])
+                valCX = (df_PRODUTO['Split_CX'] != df_PRODUTO['UNIDADEMASTER']) & (df_PRODUTO['SPLIT_UN'] == df_PRODUTO['UNIDADE'])
+                valUN = (df_PRODUTO['SPLIT_UN'] != df_PRODUTO['UNIDADE']) & (df_PRODUTO['Split_CX'] == df_PRODUTO['UNIDADEMASTER'])
+                
+                "Condição da capacidade"
+                val_int1 = (df_PRODUTO['TIPOPK'] == "INT") & (df_PRODUTO['ALTPL'] == 'ABAIXO') & (df_PRODUTO['CAP'] < df_PRODUTO['PL_LASTRO']) & (df_PRODUTO['QTEnd'] > 1)
+                val_int2 = (df_PRODUTO['TIPOPK'] == "INT") & (df_PRODUTO['ALTPL'] == 'ACIMA') & (df_PRODUTO['CAP'] >= df_PRODUTO['PL_LASTRO']) & (df_PRODUTO['QTEnd'] > 1)
+                val_div = (df_PRODUTO['CAP'] > df_PRODUTO['PL']) & (df_PRODUTO['TIPOPK'].isin(['MEIO', 'DIV']))
 
-                val_int1 = (df_PRODUTO['STATUS_PK'] == "INT") & (df_PRODUTO['V_ALTPL'] == 'ABAIXO') & (df_PRODUTO['CAP'] < df_PRODUTO['PL_LASTRO']) & (df_PRODUTO['FREQ_PROD'] > 1)
-                val_int2 = (df_PRODUTO['STATUS_PK'] == "INT") & (df_PRODUTO['V_ALTPL'] == 'ACIMA') & (df_PRODUTO['CAP'] >= df_PRODUTO['PL_LASTRO']) & (df_PRODUTO['FREQ_PROD'] > 1)
-                val_div = (df_PRODUTO['CAP'] > df_PRODUTO['PL']) & (df_PRODUTO['STATUS_PK'].isin(['MEIO', 'DIV']))
+                "Condição das fleg abastecimento"
+                abst_S = (df_PRODUTO['FLEG_ABST'] == 'NÃO') & (df_PRODUTO['TIPOPK'] == "INT") & (df_PRODUTO['ALTPL'] == 'ABAIXO')
+                abst_N = (df_PRODUTO['FLEG_ABST']== 'SIM') & ((df_PRODUTO['TIPOPK'].isin(['DIV', 'MEIO'])) | (df_PRODUTO['ALTPL'] == 'ACIMA'))
 
-                escolha_cap = ['DIV_DOWN', 'DIV_UP', 'DIVERGENCIA']
-                cond_cap = [val_int1, val_int2, val_div]
+                """Condição das rua unidade"""
+                rua_UN = (df_PRODUTO['TIPO_RUA'] == 'UN') & (df_PRODUTO['FATOR'] == 1) & (df_PRODUTO['RUA'] != 13)
+                rua_CX = (df_PRODUTO['TIPO_RUA'] == 'CX') & (df_PRODUTO['FATOR'] != 1) & (df_PRODUTO['RUA'] != 13)
 
-                abst_S = (df_PRODUTO['FLEG_ABST'] == 'NÃO') & (df_PRODUTO['STATUS_PK'] == "INT") & (df_PRODUTO['V_ALTPL'] == 'ABAIXO')
-                abst_N = (df_PRODUTO['FLEG_ABST']== 'SIM') & ((df_PRODUTO['STATUS_PK'].isin(['DIV', 'MEIO'])) | (df_PRODUTO['V_ALTPL'] == 'ACIMA'))
-                cond_abst = [abst_S, abst_N]
-
-                rua_UN = (df_PRODUTO['TIPO_RUA'] == 'UN') & (df_PRODUTO['FATOR'] == 1)
-                rua_CX = (df_PRODUTO['TIPO_RUA'] == 'CX') & (df_PRODUTO['FATOR'] != 1)
-                cond_rua = [rua_UN, rua_CX]
-
-                RuaGrandeza = (df_PRODUTO['TIPO_1'] == '1 - GRANDEZA') & (df_PRODUTO['RUA'].isin(self.chekout))
-                RuaEmbalado = (df_PRODUTO['TIPO_1'] == '5 - EMBALADO') & (~df_PRODUTO['RUA'].isin(self.chekout))
+                """Fleg de expedição"""
+                RuaGrandeza = (df_PRODUTO['TIPO_1'] == '1 - GRANDEZA') & (df_PRODUTO['RUA'].isin(self.chekout)) & (df_PRODUTO['RUA'] != 13)
+                RuaEmbalado = (df_PRODUTO['TIPO_1'] == '5 - EMBALADO') & (~df_PRODUTO['RUA'].isin(self.chekout)) & (df_PRODUTO['RUA'] != 13)
                 Cond_OS = [RuaGrandeza, RuaEmbalado]
 
-                escolha = ['DIVERGENCIA', 'DIVERGENCIA']
+                escolha = ['DIVERGENTE', 'DIVERGENTE']
 
+                df_PRODUTO['V_SIGLA'] = np.select(
+                    [valAmbas, valCX, valUN] 
+                    ,['Ambas','CX', 'UN']
+                    ,default= 'NORMAL'
+                )
                 df_PRODUTO["V_CAP"] = np.select(
-                    cond_cap
-                    ,escolha_cap
+                    [val_int1, val_int2, val_div]
+                    ,['DIV_DOWN', 'DIV_UP', 'DIVERGENTE']
                     ,default= "NORMAL"
                 )
                 df_PRODUTO['V_FLEG'] = np.select(
-                    cond_abst
+                    [abst_S, abst_N]
                     ,escolha
                     ,default= "NORMAL"
                 )
                 df_PRODUTO['V_RUA'] = np.select(
-                    cond_rua
+                    [rua_UN, rua_CX]
                     ,escolha
                     ,default= "NORMAL"
                 )
@@ -164,7 +179,7 @@ class Cadastro(auxiliar):
 
                 df_PRODUTO['V_AREA'] = np.where(
                     df_PRODUTO['AREA_LT'] > self.area_pl
-                    ,"DIVERGENCIA"
+                    ,"DIVERGENTE"
                     ,"NORMAL"
                 )
                 df_PRODUTO['V_VOLUME'] = np.where(
@@ -174,7 +189,7 @@ class Cadastro(auxiliar):
                 )
                 df_PRODUTO['V_CARACT'] = np.where(
                     df_PRODUTO['CARACTERISTICA'] != df_PRODUTO['CARACT']
-                    ,"DIVERGENCIA"
+                    ,"DIVERGENTE"
                     ,"NORMAL"
                 )
                 df_PRODUTO['V_PESO'] = np.where(
@@ -182,6 +197,13 @@ class Cadastro(auxiliar):
                     ,"ACIMA DA BANDEJA"
                     ,"NORMAL"
                 )
+                cols_kpi = ['V_SIGLA', 'V_CAP', 'V_FLEG', 'V_CARACT', 'V_TIPO_OS', 'V_AREA', 'V_VOLUME', 'V_PESO', 'V_RUA']
+                
+                todas_normais = df_PRODUTO[cols_kpi].apply(
+                    lambda col: col.astype(str).str.strip().str.upper() == 'NORMAL'
+                ).all(axis=1)
+
+                df_PRODUTO['STATUS_GERAL'] = np.where(todas_normais, 'NORMAL', 'DIVERGENTE')
             except Exception as e:
                 self.validador.registrar_log(e, "T-KPI")
                 return False
@@ -193,8 +215,8 @@ class Cadastro(auxiliar):
             self.Instancia.stageTime('Load')
 
             ordem_primaria = ['CODPROD', 'DESCRICAO','OBS2', 'RUA', 'PREDIO', 'APTO', 'TIPO_RUA','CARACTERISTICA']
-            capacidade = ['FATOR','PL_LASTRO','PL','CAP', 'P_REP','FREQ_PROD','FLEG_ABST','STATUS_PK']
-            validar = ['V_ALTPL', 'V_CAP', 'V_FLEG', 'V_CARACT', 'V_TIPO_OS', 'V_AREA', 'V_VOLUME', 'V_PESO', 'V_RUA']
+            capacidade = ['FATOR','PL_LASTRO','PL','CAP', 'P_REP','QTEnd','FLEG_ABST','TIPOPK', 'ALTPL']
+            validar = ['V_SIGLA', 'V_CAP', 'V_FLEG', 'V_CARACT', 'V_TIPO_OS', 'V_AREA', 'V_VOLUME', 'V_PESO', 'V_RUA', 'STATUS_GERAL']
             ordem_completa = ordem_primaria + capacidade + validar
             df_final = df_PRODUTO[ordem_completa]
 
