@@ -18,13 +18,13 @@
         "Booleano": "True"
     },
     "key1731": {
-        "NameFile": "BOT3706",
+        "NameFile": "BOT3731",
         "NameBT": "Lanç. inv.",
         "Logic": "TransfINV",
         "Booleano": "True"
     },
     "key1702": {
-        "NameFile": "BOT3706",
+        "NameFile": "BOT1702",
         "NameBT": "Etiquetas",
         "Logic": "EtiquetasProd",
         "Booleano": "True"

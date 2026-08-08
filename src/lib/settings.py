@@ -43,10 +43,12 @@ class Assets(_Source):
     ImgPrincipal = os.path.join(Imagens, 'FleshPerfil.png')
 
     "Pasta dos jsons"
+    JsonModulo = os.path.join(Jsons, 'modulo.json')
+    JsonBot = os.path.join(Jsons, 'bots.json')
+
     JsonFlowRack = os.path.join(Jsons, 'FlowRack.json')
     JsonJornada = os.path.join(Jsons, 'jornada.json')
     JsonLogTime = os.path.join(Jsons, 'logTime.json')
-    JsonModulo = os.path.join(Jsons, 'modulo.json')
     JsonRotina = os.path.join(Jsons, 'rotinas.json')
     JsonErros = os.path.join(Jsons, 'ValError.json')
     pass
