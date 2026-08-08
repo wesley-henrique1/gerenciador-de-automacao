@@ -21,39 +21,11 @@
         "_estado": "true"
 
     },
-    "_CheioVazioKeys": {
-        "_chave": "CheioVazioKeys",
-        "_Nomeclatura": "Analitico Cheio x Vazio",
-        "_Modulo": "cheio_vazio",
-        "_classes": "CheioVazio",
-        "_estado": "false"
-    },
-    "_ContagemINVKeys": {
-        "_chave": "ContagemINVKeys",
-        "_Nomeclatura": "Analitico Inventarios",
-        "_Modulo": "contagem",
-        "_classes": "ContagemINV",
-        "_estado": "false"
-    },
     "_CorteKeys":{
         "_chave": "CorteKeys",
         "_Nomeclatura": "Analitico Cortes",
         "_Modulo": "corte",
         "_classes": "Corte",
-        "_estado": "true"
-    },
-    "_FefoAbstKeys":{
-        "_chave": "FefoAbstKeys",
-        "_Nomeclatura": "FEFO: Abastecimento",
-        "_Modulo": "fefo",
-        "_classes": "FefoAbst",
-        "_estado": "true"
-    },
-    "_FefoABCKeys": {
-        "_chave": "FefoABCKeys",
-        "_Nomeclatura": "FEFO: Curva ABC",
-        "_Modulo": "fefo",
-        "_classes": "FefoCurva",
         "_estado": "true"
     },
     "_GiroEstoqueKeys": {
@@ -69,6 +41,43 @@
         "_Modulo": "mapa_estoque",
         "_classes": "MapaEstoque",
         "_estado": "true"
+    },
+    "_VirutaisKeys":{
+        "_chave": "VirtualKeys",
+        "_Nomeclatura": "Relatorio das virtuais",
+        "_Modulo": "Virtuais",
+        "_classes": "VirtualBase",
+        "_estado": "true"
+    },
+    
+    
+    "_FefoAbstKeys":{
+        "_chave": "FefoAbstKeys",
+        "_Nomeclatura": "FEFO: Abastecimento",
+        "_Modulo": "fefo",
+        "_classes": "FefoAbst",
+        "_estado": "false"
+    },
+    "_FefoABCKeys": {
+        "_chave": "FefoABCKeys",
+        "_Nomeclatura": "FEFO: Curva ABC",
+        "_Modulo": "fefo",
+        "_classes": "FefoCurva",
+        "_estado": "false"
+    },
+    "_CheioVazioKeys": {
+        "_chave": "CheioVazioKeys",
+        "_Nomeclatura": "Analitico Cheio x Vazio",
+        "_Modulo": "cheio_vazio",
+        "_classes": "CheioVazio",
+        "_estado": "false"
+    },
+    "_ContagemINVKeys": {
+        "_chave": "ContagemINVKeys",
+        "_Nomeclatura": "Analitico Inventarios",
+        "_Modulo": "contagem",
+        "_classes": "ContagemINV",
+        "_estado": "false"
     },
     "_OSCheckKeys": {
         "_chave": "OSCheckKeys",

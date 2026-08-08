@@ -10,6 +10,7 @@
     "OperationalError": "Não foi possível conectar ao banco de dados. Verifique a rede ou se o servidor está ativo.",
     "ProgrammingError": "Erro interno na estrutura da query SQL ou a tabela/coluna informada não existe.",
     "IntegrityError": "Falha de integridade: tentativa de inserir um registro duplicado ou nulo onde não é permitido.",
+    "FailSafeException": "A automação foi interrompida de emergência porque o ponteiro do mouse foi movido para o canto da tela.",
     "TclError": "Erro interno de renderização ou comportamento da interface gráfica.",
     "NameError": "Uma variável, componente ou função interna foi chamada mas não foi definida no sistema.",
     "ConnectionError": "Falha de conexão com a internet ou o servidor remoto recusou o acesso.",

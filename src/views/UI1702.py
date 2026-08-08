@@ -1,5 +1,5 @@
 from ..lib.settings import Assets
-from ..automact import Flow1702
+from ..bot import flow1702
 import tkinter as tk
 
 
@@ -28,7 +28,7 @@ class Ui1702:
         self.widgets_clicaveis()
         self.localizador()
 
-        self.ancora = Flow1702(self)
+        self.ancora = flow1702.Flow1702(self)
         root.mainloop()
         pass
 

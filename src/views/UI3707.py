@@ -1,6 +1,6 @@
 from ..lib.settings import Assets
 from ..lib import ValidarErros
-from ..automact import Flow3707
+from ..bot import  flow3707
 import tkinter as tk
 
 class Ui3707:
@@ -30,7 +30,7 @@ class Ui3707:
         self.clicaveis()
         self.localizar()
 
-        self.ancora = Flow3707(self)
+        self.ancora = flow3707.Flow3707(self)
         root.mainloop()
         pass
 

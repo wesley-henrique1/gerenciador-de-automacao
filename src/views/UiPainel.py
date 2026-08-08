@@ -1,4 +1,5 @@
 from ..lib import ValidarErros
+from src.lib.settings import Assets
 import tkinter as tk
 from tkinter import messagebox
 import time
@@ -28,7 +29,7 @@ class PainelLog:
         root.geometry("400x300")
         root.resizable(False,False)
         root.config(bg= self.background)
-        # root.iconbitmap(Assets.IcoPrincipal)
+        root.iconbitmap(Assets.IcoPrincipal)
         chaves = mapa.keys()
 
         for var in chaves:

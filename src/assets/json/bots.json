@@ -1,0 +1,34 @@
+{
+    "Key3707": {
+        "NameFile": "BOT3707",
+        "NameBT": "Transferencia",
+        "Logic": "TransferirPROD",
+        "Booleano": "True"
+    },
+    "key3706R": {
+        "NameFile": "BOT3706",
+        "NameBT": "Retirada END",
+        "Logic": "RetirarEndereco",
+        "Booleano": "True"
+    },
+    "key3706C": {
+        "NameFile": "BOT3706",
+        "NameBT": "Capacidade",
+        "Logic": "Capacidade",
+        "Booleano": "True"
+    },
+    "key1731": {
+        "NameFile": "BOT3706",
+        "NameBT": "Lanç. inv.",
+        "Logic": "TransfINV",
+        "Booleano": "True"
+    },
+    "key1702": {
+        "NameFile": "BOT3706",
+        "NameBT": "Etiquetas",
+        "Logic": "EtiquetasProd",
+        "Booleano": "True"
+    }
+
+
+}

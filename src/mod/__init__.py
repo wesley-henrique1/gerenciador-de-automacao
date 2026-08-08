@@ -1,4 +1,4 @@
-import importlib.util  # Mudança aqui: importando o util para carregar arquivos físicos
+import importlib.util
 import json
 import sys
 import os
@@ -11,7 +11,6 @@ def Executar():
     validador = ValidarErros(fonte="mod")
     base = Assets.JsonModulo
 
-    # Determina a raiz correta do projeto (tanto em .py quanto no .exe)
     if getattr(sys, 'frozen', False):
         root_dir = os.path.dirname(sys.executable)
     else:
