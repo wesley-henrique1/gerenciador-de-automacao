@@ -4,7 +4,6 @@
 <tr>
 <!-- Lado Esquerdo: Frase, Links e Badges -->
 <td align="center" valign="middle">
-<img src="src/assets/img/arthur_mod_ferias.jpeg" width="200" alt="arthur ferias">
     <h3>"Deixe o robô trabalhar enquanto você toma um café."</h3>
     <h2>
         <a href="https://www.linkedin.com/in/wesley-henrique22" target="_blank" rel="noopener noreferrer">LinkedIn</a> |
