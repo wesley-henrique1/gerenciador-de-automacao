@@ -1,6 +1,6 @@
-from ..lib.settings import Assets
-from ..lib import ValidarErros
-from ..bot import  flow3707
+from src.lib.settings import Assets
+from src.lib import ValidarErros
+from src.bot import  flow3707
 import tkinter as tk
 
 class Ui3707:

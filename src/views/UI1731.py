@@ -1,5 +1,5 @@
-from ..lib.settings import Assets
-from ..bot import flow1731
+from src.lib.settings import Assets
+from src.bot import flow1731
 import tkinter as tk
 
 class Ui1731:

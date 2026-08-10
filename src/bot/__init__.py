@@ -3,11 +3,11 @@ import json
 import sys
 import os
 
-# from ..lib.settings import Assets
-# from ..lib import ValidarErros
+from ..lib.settings import Assets
+from ..lib import ValidarErros
 
-from lib.settings import Assets
-from lib import ValidarErros
+# from lib.settings import Assets
+# from lib import ValidarErros
 
 def ExeBots():
     validador = ValidarErros(fonte="bot")
