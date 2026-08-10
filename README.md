@@ -1,13 +1,15 @@
-<h1 style="text-align: center;">GERENCIAMENTO DE AUTOMAÇÃO 🦥</h1>  
-<div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; margin: 20px auto; max-width: 1000px;">
-<!-- Lado Esquerdo: Título, Frase e Links -->
-<div style="text-align: center;">
-    <img src="src/assets/img/arthur_mod_ferias.jpeg" width="300" alt="Flash - Mascot">
+<h1 align="center">GERENCIAMENTO DE AUTOMAÇÃO 🦥</h1>
+
+<table align="center">
+<tr>
+<!-- Lado Esquerdo: Frase, Links e Badges -->
+<td align="center" valign="middle">
+<img src="src/assets/img/arthur_mod_ferias.jpeg" width="200" alt="arthur ferias">
     <h3>"Deixe o robô trabalhar enquanto você toma um café."</h3>
     <h2>
         <a href="https://www.linkedin.com/in/wesley-henrique22" target="_blank" rel="noopener noreferrer">LinkedIn</a> |
-        <a href="https://github.com/wesley-henrique1" target="_blank" rel="noopener noreferrer">github</a> | 
-        <a href="https://www.bing.com/search?q=aqui%20estou%20devendo%20link&qs=n&form=QBRE&sp=-1&ghc=1&lq=0&pq=aqui%20estou%20devendo%20link&sc=12-23&sk=&cvid=989C403393164B4298A65FE780076F4B" target="_blank" rel="noopener noreferrer">instagram</a> 
+        <a href="https://github.com/wesley-henrique1" target="_blank" rel="noopener noreferrer">GitHub</a> | 
+        <a href="https://www.bing.com/search?q=aqui%20estou%20devendo%20link&qs=n&form=QBRE&sp=-1&ghc=1&lq=0&pq=aqui%20estou%20devendo%20link&sc=12-23&sk=&cvid=989C403393164B4298A65FE780076F4B" target="_blank" rel="noopener noreferrer">Instagram</a>
     </h2>
     <p align="center">
         <img src="https://img.shields.io/badge/Python-3.13-blue?style=flat&logo=python" alt="Python">
@@ -15,14 +17,14 @@
         <img src="https://img.shields.io/badge/View-Power_BI-F2C811?style=flat&logo=powerbi" alt="PowerBI">
         <img src="https://img.shields.io/badge/Status-Em_Produção-green?style=flat" alt="Status">
     </p>
+</td>
 
-</div>
-
-<!-- Lado Direito: Imagem -->
-<div style="align-items: center">
-    <img src="src/assets/img/FleshPerfil.png" width="300" alt="Flash - Mascot">
-</div>
-</div>
+<!-- Lado Direito: Imagem Principal -->
+<td align="center" valign="middle" width="300">
+    <img src="src/assets/img/FleshPerfil.png" width="280" alt="Flash - Mascot">
+</td>
+</tr>
+</table>
 
 ---
 # 🎯 Objetivo do Projeto
