@@ -1,219 +1,170 @@
-from ..lib.settings import BaseDados, Gestao
-from ..lib import ValidarErros, MonitorETL
+from ..lib.settings import Wms, ColNames, OutPut
+from ..lib.Tratar286 import BaseDados286
+from ..lib.valerros import ValidarErros
 
+import datetime as dt
+from pathlib import Path
 import pandas as pd
-import glob
-import os 
+import numpy as np
 
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import URL
-
-class __aux:
-    def cosultar_db(self, consulta):
+class auxiliar:
+    def converter_numero_seguro(self, val):
+        if isinstance(val, (int, float)):
+            return float(val) if pd.notna(val) else 0.0
+            
+        val_str = str(val).strip()
+        if val_str.lower() in ['nan', '', 'none']:
+            return 0.0
+        
+        if ',' in val_str and '.' in val_str:
+            val_str = val_str.replace('.', '').replace(',', '.')
+        elif ',' in val_str:
+            val_str = val_str.replace(',', '.')
+        elif val_str.count('.') > 1:
+            val_str = val_str.replace('.', '')
         try:
-            connection_url = URL.create(
-            "access+pyodbc",
-            query={"odbc_connect":  self.ODBC_CONN_STR}
-            )
-            self.engine = create_engine(connection_url)
-            db_dados = pd.read_sql(text(consulta), self.engine)
-            return db_dados
-        except Exception as e:
-            self.validador.registrar_log(e, "Consulta_banco_dados")
-            return pd.DataFrame()
-    def atualizar(self, df, tabela):
-        try:            
-            df.to_sql(
-                name= tabela
-                ,con= self.engine
-                ,if_exists='append'
-                ,index=False
-                ,chunksize=100
-            )
-        except Exception as e:
-            self.validador.registrar_log(e, f"Load_{tabela}")
-            return False
-class ContagemINV(__aux):
-    validador = ValidarErros(fonte="ContagemINV")
+            return float(val_str)
+        except ValueError:
+            return 0.0
+        
+class ContagemETL(auxiliar):
+    validador = ValidarErros(fonte="Mapa Estoque")
     def __init__(self):
-        super().__init__()
-        DRIVER = Gestao.drive
-        DB_PATH = BaseDados.path_acumulado
+        self.ancora286 = BaseDados286()
+        self.caminhoINV = Path(r"Z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\Wesley Henrique\base_inv")
+        self.booleanoSave = False
 
-        self.TABELA_PROD = BaseDados.DBProd
-        self.TABELA_CONT = BaseDados.DBCont
+        self.ListaCaminhos = [Wms.endereco07]
+        self.ListaCaminhos.extend(self.ancora286.RetornoBase())
+        self.ListOutPut = [OutPut.InvSave]
 
-        self.ODBC_CONN_STR = (f"DRIVER={DRIVER};" f"DBQ={DB_PATH};")
-        self.list_direct = [Gestao.dir_PROD, Gestao.invCont]
-
-        self.Instancia = MonitorETL()
-
+        pass
     def pipeline(self):
         try:
-            self.Instancia.stageTime('Extract')
-            inv_prod = glob.glob(os.path.join(self.list_direct[0], "*.xls*"))
-            inv_cont = glob.glob(os.path.join(self.list_direct[1], "*.xls*"))
+            listaAR = []
+            col = ['Dep.', 'Rua', 'Prédio', 'Nível', 'Apto.', 'Código', 'Descrição', 'Inventário']
+            col_286 = ['Código', 'Estoque', 'Qtde Pedida']
 
-            db_prod = self.cosultar_db(f"SELECT NOME_ARQ FROM {self.TABELA_PROD}")
-            dados_prod = set(db_prod['NOME_ARQ'].str.strip().tolist())
-
-            db_cont =self.cosultar_db(f"SELECT COD_INV FROM {self.TABELA_CONT}")
-            dados_cont = set(db_cont['COD_INV'].tolist())
-            msg_db = []
-            self.Instancia.stageTime('Extract')
+            for arquivo in self.caminhoINV.glob("*xls*"):
+                if not arquivo.name.startswith("~$"):
+                    df = pd.read_excel(arquivo, header= 1, usecols= col)
+                    listaAR.append(df)
+            if not listaAR:
+                return
+            
+            dfInvetario = pd.concat(listaAR, axis= 0, ignore_index=True)
+            estoque = self.ancora286.Pipeline(colcheck= col_286)
+            endereco = pd.read_csv(self.ListaCaminhos[0], header= None, names= ColNames.Endereco)
         except Exception as e:
             self.validador.registrar_log(e, "Extract")
-            return False  
+            return False
         try:
-            self.Instancia.stageTime('Transform')
+            endereco = endereco.rename(columns= {'COD': 'CODPROD'})
+            grupoAereos = endereco.loc[endereco['TIPO_PK'] == 'AE'].groupby(['CODPROD']).agg(
+                QTDE_AE = ('TIPO_PK', 'count'),
+                END_AE = ('DISP', 'sum')
+            ).reset_index()
+            apartamentos = endereco[['CODPROD','TIPO_PK', 'ENTRADA', 'SAIDA', 'DISP']].loc[endereco['TIPO_PK'] == 'AP']
+
+            dfInvetario = dfInvetario.rename(columns= {'Código': 'CODPROD'})
+
+            dfCompleto = dfInvetario.merge(estoque, on= 'CODPROD', how= 'left')
+            dfCompleto = dfCompleto.merge(apartamentos, on= 'CODPROD', how= 'left')
+            dfCompleto = dfCompleto.merge(grupoAereos, on= 'CODPROD', how= 'left')
+            dfCompleto = dfCompleto.drop(columns= ['Dep.', 'Nível', 'Descrição','TIPO_PK'])
+            for coluna in ['ESTOQUE', 'DISPONIVEL', 'TOTALBLOQ', 'ENTRADA', 'SAIDA', 'DISP']:
+                dfCompleto[coluna] = dfCompleto[coluna].apply(self.converter_numero_seguro)
+
+            dfCompleto = dfCompleto.fillna(value={'QTDE_AE': 0, 'END_AE': 0})
+            dfCompleto['SaldoProd'] = dfCompleto['Inventário'] + dfCompleto['DISP'] 
+
             try:
-                BOOL_PROD = False
-                listagem_prod = []
-                erros_prod = []
-                for w, file in enumerate(inv_prod, 1):
-                    if file in dados_prod:
-                        continue
-                    nome_file = os.path.basename(file)
-                    try:
-                        inv_cod = os.path.splitext(nome_file)
-                        codigo_limpo = int((inv_cod[0]).strip())
-                        ficante_df = pd.read_excel(file, header= 1, usecols= ["Código", "Descrição", "Rua", "Inventário"])
-                    except Exception as e:
-                        erros_prod.append(nome_file)
-                        self.validador.registrar_log(e, nome_file)
-                        continue
+                dfCompleto['Pendente'] = np.where(
+                    dfCompleto['ENTRADA'].astype(float) + dfCompleto['SAIDA'].astype(float),
+                    "Sim", "Não"
+                )
+                gerCritico = (dfCompleto['SaldoProd'] == 0) & (dfCompleto['DISPONIVEL'] > 0) 
+                GerInferior = dfCompleto['SaldoProd'] < dfCompleto['DISPONIVEL']
+                GerSuperior = dfCompleto['SaldoProd'] > dfCompleto['DISPONIVEL']
+                GerNeutro = dfCompleto['SaldoProd'] == dfCompleto['DISPONIVEL']
+                dfCompleto['BaixoEST'] = np.select(
+                    [gerCritico, GerInferior, GerSuperior, GerNeutro], 
+                    ["Critico", "Inferior", "Superior", "Neutro"], 
+                    default= 'Anomalias'
+                )
 
-                    ficante_df = ficante_df.rename(columns={
-                        "Código": "COD_PROD"
-                        ,"Rua": "RUA"
-                        ,"Descrição": "DESC"
-                        ,"Inventário": "CONTAGEM"
-                    })
-                    ficante_df['NOME_ARQ'] = nome_file
-                    ficante_df['COD_INV'] = codigo_limpo
-                    ficante_df = ficante_df[['COD_INV', "COD_PROD","DESC", "RUA", "CONTAGEM", "NOME_ARQ"]]
-
-                    listagem_prod.append(ficante_df)
-                if listagem_prod:
-                    df_PROD = pd.concat(listagem_prod, ignore_index=True)
-                    BOOL_PROD = True
-                    total = len(listagem_prod)
-                    retorno_bd = {
-                        "ID": "INV_PROD"
-                        ,"QTDE": total
-                    }
-                    msg_db.append(retorno_bd)
+                ProdZerado = (dfCompleto['ESTOQUE'] == 0) & (dfCompleto['PEDIDO'] == 0) &  (dfCompleto['Inventário'] == 0)
+                ProdCritico = (dfCompleto['ESTOQUE'] == 0) &  (dfCompleto['Inventário'] != 0)
+                ProdFora = (dfCompleto['ESTOQUE'] > 0) | (dfCompleto['PEDIDO'] > 0)
+                
+                dfCompleto['CATEGORIA'] = np.select(
+                    [ProdZerado, ProdCritico, ProdFora], 
+                    ['Zerados', 'Criticos','Estoque/Pedido'], 
+                    default= 'Anomalias'
+                )
             except Exception as e:
-                self.validador.registrar_log(e, "T-INV_PROD")
-            try:
-                BOOL_CONT = False
-                listagem_cont = []
-                erros_cont = []
-
-                for file in inv_cont:
-                    try:
-                        nome_file = os.path.basename(file)
-
-                        nome_sem_ext = os.path.splitext(nome_file)
-                        partes = (nome_sem_ext[0]).split('_')
-                        cod_limpo = int((partes[0]).strip())
-                        num_contagem = int(partes[1].strip())
-                    except Exception as e:
-                        self.validador.registrar_log(e, f"T-INV_CONT:{file}")
-
-                    if cod_limpo in dados_cont:
-                        continue
-                    try:
-                        ficante_df = pd.read_excel(file, usecols= ["Contador", "End. OS", "Inicio Cont.", "Fim cont."])
-
-                        cont_func = ficante_df['Contador'].nunique()
-                        qt_end = ficante_df['End. OS'].sum()
-                        inicio_dt = ficante_df['Inicio Cont.'].min()
-                        fim_dt = ficante_df['Fim cont.'].max()
-                        df_analitico = pd.DataFrame({
-                            "COD_INV": [cod_limpo]
-                            ,"QT_FUNC": [cont_func]
-                            ,"QT_END": [qt_end]
-                            ,"INICIO": [inicio_dt]
-                            ,"FIM": [fim_dt]
-                            ,"contagem": [num_contagem]
-                        })
-                        listagem_cont.append(df_analitico)
-                    except Exception as e:
-                        erros_cont.append(nome_file)
-                        self.validador.registrar_log(e, nome_file)
-                        continue
-
-                if listagem_cont:
-                    df_CONT = pd.concat(listagem_cont, ignore_index= True)
-
-                    cont_final = df_CONT.groupby("COD_INV").agg(
-                        QT_FUNC = ("QT_FUNC", "nunique")
-                        ,QT_END = ("QT_END", "sum")
-                        ,INICIO = ("INICIO", "min")
-                        ,FIM = ("FIM", "max")
-                        ,CONTAGEM = ("contagem", "nunique") 
-                    ).reset_index()
-                    delta = cont_final["FIM"] - cont_final["INICIO"]
-                    cont_final["TEMPO"] = delta.dt.total_seconds() / 60         
-                    BOOL_CONT = True
-
-                    total = len(listagem_cont)
-                    retorno_bd = {
-                        "ID": "INV_CONT"
-                        ,"QTDE": total
-                    }
-                    msg_db.append(retorno_bd)
-            except Exception as e:
-                self.validador.registrar_log(e, "T-INV_CONT")
-            self.Instancia.stageTime('Transform')
+                self.validador.registrar_log(e, "T_metricas")
         except Exception as e:
             self.validador.registrar_log(e, "Transform")
-            return False      
+            return False
         try:
-            self.Instancia.stageTime('Load')
-            if BOOL_PROD:
-                self.atualizar(df_PROD, self.TABELA_PROD)
-                
-            if BOOL_CONT:
-                self.atualizar(cont_final, self.TABELA_CONT)
-
-            self.dic_prod ={
-                "MODULO": "INV_PROD"
-                ,"ARQUIVOS": len(listagem_prod)
-                ,"ERROS": len(erros_prod)
-                ,"LEITURA": len(inv_prod) 
-            }
-            self.dic_count = {
-                "MODULO": "INV_CONT"
-                ,"ARQUIVOS": len(listagem_cont)
-                ,"ERROS": len(erros_cont)
-                ,"LEITURA": len(inv_cont)
-            }
-            self.Instancia.stageTime('Load')
-            self.Instancia.conversor(Modulo= "ContagemINV")
+            dfCompleto.to_excel(self.ListOutPut[0], sheet_name= "Inventario", index= False)
             return True
         except Exception as e:
             self.validador.registrar_log(e, "Load")
             return False
     def carregamento(self, validar):
         lista_de_logs = []
-        dic_retorno = []
+        ListRetorno = []
         try:
             if not validar:
-                return
-            dic_retorno.append(self.dic_prod)
-            dic_retorno.append(self.dic_count)
-            return lista_de_logs, dic_retorno
+                return lista_de_logs, ListRetorno 
+                
+            for contador, Arquivo in enumerate(self.ListaCaminhos, 1):
+                Arquivo = Path(Arquivo)
+                data_file = Arquivo.stat().st_mtime
+                nome_file = Arquivo.name
+
+                data_modificacao = dt.datetime.fromtimestamp(data_file)
+                data_formatada = data_modificacao.strftime('%d/%m/%Y')
+                horas_formatada = data_modificacao.strftime('%H:%M:%S')
+
+                dic_log = {
+                    "CONTADOR" : contador
+                    ,"ARQUIVO" : nome_file
+                    ,"DATA" : data_formatada
+                    ,"HORAS" : horas_formatada
+                }
+                lista_de_logs.append(dic_log)
+                
+            return lista_de_logs, ListRetorno
         except Exception as e:
             self.validador.registrar_log(e, "CARREGAMENTO")
-            return False
+            return lista_de_logs, ListRetorno
     def outputLog(self, validar):
         ListaOutPut = []
+        var = None
         try:
             if not validar:
-                return
-            return ListaOutPut, path, path
+                return ListaOutPut 
+                
+            for Arquivo in self.ListOutPut:
+                Arquivo = Path(Arquivo)
+                data_file = Arquivo.stat().st_mtime
+                nome_file = Arquivo.name
+                var = Arquivo
+                data_modificacao = dt.datetime.fromtimestamp(data_file) 
+                data_formatada = data_modificacao.strftime('%d/%m/%Y')
+                horas_formatada = data_modificacao.strftime('%H:%M:%S')
+
+                Dicionario = {
+                    "ARQUIVO": nome_file,
+                    "DATA": data_formatada,
+                    "HORA": horas_formatada
+                }
+                ListaOutPut.append(Dicionario)
+            return ListaOutPut, var
+            
         except Exception as e:
             self.validador.registrar_log(e, "output")
-            return False
+            return ListaOutPut, Arquivo

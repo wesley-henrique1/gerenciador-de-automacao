@@ -46,10 +46,16 @@ class auxiliar:
                 print("Erro: O arquivo está aberto no Excel. Feche o arquivo antes de continuar.")
                 input("[enter] para continuar...")
                 return False
-class main:
-    auxiliar.AbrirFile()
+        return True
+
+def main():
     while True:
         auxiliar.limpar_terminal()
+        
+        # Garante que o arquivo modelo exista a cada ciclo do menu
+        if not os.path.exists(auxiliar.CapturarFile()):
+            auxiliar.AbrirFile()
+            
         largura = 71
 
         print("=" * largura)
@@ -74,30 +80,31 @@ class main:
             auxiliar.FecharFile()
 
         elif escolha == "3":
-            BOT3707.TransferirPROD(arquivo= auxiliar.CapturarFile(), largura= largura)
+            BOT3707.TransferirPROD(arquivo=auxiliar.CapturarFile(), largura=largura)
             auxiliar.FecharFile()
 
         elif escolha == "4":
-            print("EM construção")
-            pass
+            print("Em construção")
+            time.sleep(1)
+            
         elif escolha == "5":
-            print("EM construção") 
-            pass
+            print("Em construção") 
+            time.sleep(1)
+            
         elif escolha == "0":
             print("Encerrando Hefesto...")
             caminho = auxiliar.CapturarFile()
             if os.path.exists(caminho):
-                a = auxiliar.FecharFile()
-                if not a:
+                sucesso_fechamento = auxiliar.FecharFile()
+                if not sucesso_fechamento:
                     time.sleep(0.5)
                     break
             else:
                 time.sleep(0.5)
                 break
         else:
-            print("[ALERTA] Opção inválida! Digite 1, 2 ou 0.")
+            print("[ALERTA] Opção inválida! Digite 1, 2, 3, 4, 5 ou 0.")
             time.sleep(1)
-
 
 if __name__ == "__main__":
     main()

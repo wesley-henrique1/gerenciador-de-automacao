@@ -118,6 +118,7 @@ class BaseDados(__auxiliares__):
     pass
 
 class OutPut(__auxiliares__):
+    InvSave = os.path.join(__auxiliares__.OutPut, 'Analitico_INV.xlsx')
     BotSave = os.path.join(__auxiliares__.OutPut, 'Retorno_BOT.xlsx')
     Baixas = os.path.join(__auxiliares__.OutPut, 'Analitico baixa.xlsx')
     Cadastro = os.path.join(__auxiliares__.OutPut, 'Analitico cadastro.xlsx')

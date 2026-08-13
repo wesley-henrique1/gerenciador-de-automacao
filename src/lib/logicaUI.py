@@ -152,7 +152,6 @@ class Processador:
                     ,"nomeclatura": dados_arquivo["ARQUIVO"]
                     ,"path": path
                 }
-
                 if log_arquivo:
                     lista_de_logs.extend(log_arquivo if isinstance(log_arquivo, list) else [log_arquivo])
                 if log_db:

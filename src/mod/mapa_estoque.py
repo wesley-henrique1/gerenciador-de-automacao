@@ -227,9 +227,7 @@ class MapaEstoque(auxiliar):
             ]
             df_completo = df_completo[etapa_1 + etapa_2 + etapas_KPI]
             df_completo = df_completo.sort_values(by=["RUA", "PREDIO"], ascending= True)
-            print("\nsave")
-            print(df_completo.head(3))
-            print(grupoRua.head(3))
+            
             with pd.ExcelWriter(self.Retorno[0], engine= 'openpyxl') as var:
                 df_completo.to_excel(var , index= False, sheet_name="Analitico")
                 grupoFase.to_excel(var, index= False, startrow= 0,sheet_name="FasesINV")

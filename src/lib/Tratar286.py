@@ -1,8 +1,8 @@
 import pandas as pd
-import os
-from datetime import datetime
-class BaseDados286:
+from .valerros import ValidarErros
 
+class BaseDados286:
+    validador = ValidarErros(fonte="main_logica")
     def __init__(self):
         self.Ativos11 = r'z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\_BaseDados\286 - Estoque ATIVO11.xls'
         self.Ativos18 = r'z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\_BaseDados\286 - Estoque ATIVO18.xls'
@@ -36,31 +36,14 @@ class BaseDados286:
         except ValueError:
             return 0.0
 
-    def UmaVia286(self, colcheck: list[str] = None):
-        try:
-            if colcheck:
-                self.cols.extend(colcheck)
-                print(self.cols)
-            DfAtivos11 = pd.read_excel(self.Ativos11, usecols=self.cols)
-            DataFL11 = pd.read_excel(self.Fl11, usecols=self.cols)
-            for df in [DfAtivos11, DataFL11]:
-                df['CODPROD'] = pd.to_numeric(df['Código'], errors='coerce')
-                df.dropna(subset=['CODPROD'], inplace=True)
-                df['CODPROD'] = df['CODPROD'].astype(int)
-            DfEstoque11 = pd.concat([DfAtivos11, DataFL11], axis=0).drop_duplicates(subset=['Código'])
-            for coluna in ['Estoque', 'Qtde Pedida', 'Bloqueado(Qt.Bloq.-Qt.Avaria)', 'Qt.Avaria']:
-                DfEstoque11[coluna] = DfEstoque11[coluna].apply(self.__converter_numero_seguro).fillna(0)
-
-            return DfEstoque11
         except Exception as e:
-            print(f"[ERRO Na Uma via 286]: {e}")
-            return pd.DataFrame()
+            self.validador.registrar_log(e, "286_numeros")
+            return False
 
     def Pipeline(self, colcheck= None):
         try:
             if colcheck:
                 self.cols.extend(colcheck)
-                print(self.cols)
 
             DfAtivos11 = pd.read_excel(self.Ativos11, usecols=self.cols)
             DfAtivos18 = pd.read_excel(self.Ativos18, usecols=self.cols)
@@ -97,11 +80,7 @@ class BaseDados286:
             return DfEstoque
 
         except Exception as e:
-            print(f"[ERRO NO PIPELINE 286]: {e}")
-            return pd.DataFrame()
+            self.validador.registrar_log(e, "Extract")
+            return False
     def RetornoBase(self):
         return self.ListaAR 
-if __name__ == "__main__":
-    instancia = BaseDados286()
-    dados = instancia.Pipeline()
-    print(dados.head())

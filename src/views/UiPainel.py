@@ -56,8 +56,7 @@ class PainelLog:
 
             for var in selecionados:
                 caminho = self.path[var]
-
-                processo = subprocess.Popen(caminho, shell= True)
+                processo = subprocess.Popen(str(caminho), shell= True)
                 if processo.poll() is None:
                     print(f"\nSucesso: O programa foi aberto e está rodando (PID: {processo.pid})")
                 else:

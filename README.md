@@ -1,9 +1,9 @@
-<h1 align="center">GERENCIAMENTO DE AUTOMAÇÃO 🦥</h1>
 
 <table align="center">
 <tr>
 <!-- Lado Esquerdo: Frase, Links e Badges -->
 <td align="center" valign="middle">
+    <h3 align="center">GERENCIAMENTO DE AUTOMAÇÃO 🦥</h3>
     <h3>"Deixe o robô trabalhar enquanto você toma um café."</h3>
     <h2>
         <a href="https://www.linkedin.com/in/wesley-henrique22" target="_blank" rel="noopener noreferrer">LinkedIn</a> |
@@ -17,7 +17,6 @@
         <img src="https://img.shields.io/badge/Status-Em_Produção-green?style=flat" alt="Status">
     </p>
 </td>
-
 <!-- Lado Direito: Imagem Principal -->
 <td align="center" valign="middle" width="300">
     <img src="src/assets/img/FleshPerfil.png" width="280" alt="Flash - Mascot">
@@ -28,7 +27,7 @@
 ---
 # 🎯 Objetivo do Projeto
 
-Centralizar e gerenciar a execução de automações e pipelines de dados em um painel único. A plataforma elimina a execução manual de scripts `.py` no terminal/IDE, organizando as operações através de uma interface gráfica amigável categorizada em:
+Centralizar e gerenciar a execução de automações e pipelines de dados em um painel único. A plataforma elimina a execução manual de scripts `.py` no terminal/IDE, organizando as operações através de uma interface gráfica amigável.
 
 ---
 ---
@@ -173,10 +172,15 @@ graph TD
 ## 🏗️ Arquitetura dos Módulos Pipelines:
 >### 💻 Código-Fonte
 ```python
+from src.lib.valerros import ValidarErros
+from datetime import datetime as dt
+from pathlib import Path
+
 class auxiliar:
     pass
 
 class ModulosETL(auxiliar):
+    validador = ValidarErros(fonte="Mapa Estoque")
     def __init__(self):
         pass
     def pipeline(self):
@@ -196,9 +200,62 @@ class ModulosETL(auxiliar):
             self.validador.registrar_log(e, "Load")
             return False
 
-    def carregamento(self, validar: list[str]):
-        pass
-    def outputLog(self, validar: list[str]):
+    def carregamento(self, validar):
+        lista_de_logs = []
+        ListRetorno = []
+        try:
+            if not validar:
+                return lista_de_logs, ListRetorno 
+                
+            for contador, Arquivo in enumerate(self.list_path, 1):
+                Arquivo = Path(Arquivo)
+                data_file = Arquivo.stat().st_mtime
+                nome_file = Arquivo.name
+
+                data_modificacao = dt.datetime.fromtimestamp(data_file)
+                data_formatada = data_modificacao.strftime('%d/%m/%Y')
+                horas_formatada = data_modificacao.strftime('%H:%M:%S')
+
+                dic_log = {
+                    "CONTADOR" : contador
+                    ,"ARQUIVO" : nome_file
+                    ,"DATA" : data_formatada
+                    ,"HORAS" : horas_formatada
+                }
+                lista_de_logs.append(dic_log)
+                
+            return lista_de_logs, ListRetorno
+        except Exception as e:
+            self.validador.registrar_log(e, "CARREGAMENTO")
+            return lista_de_logs, ListRetorno
+    def outputLog(self, validar):
+        ListaOutPut = []
+        
+        try:
+            if not validar:
+                return ListaOutPut 
+                
+            for Arquivo in self.Retorno:
+                Arquivo = Path(Arquivo)
+                data_file = Arquivo.stat().st_mtime
+                nome_file = Arquivo.name
+
+                data_modificacao = dt.datetime.fromtimestamp(data_file) 
+                data_formatada = data_modificacao.strftime('%d/%m/%Y')
+                horas_formatada = data_modificacao.strftime('%H:%M:%S')
+
+                Dicionario = {
+                    "ARQUIVO": nome_file,
+                    "DATA": data_formatada,
+                    "HORA": horas_formatada
+                }
+                ListaOutPut.append(Dicionario)
+                
+            return ListaOutPut, Arquivo
+            
+        except Exception as e:
+            self.validador.registrar_log(e, "output")
+            return ListaOutPut
         pass
 ```
 > 1.  `auxiliar` (Classe Auxiliar) <br>
