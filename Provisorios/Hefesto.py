@@ -1,4 +1,4 @@
-import BOT3706, BOT3707
+import BOT3706, BOT3707, BOT1755
 import os
 import time
 import pandas as pd 
@@ -52,7 +52,6 @@ def main():
     while True:
         auxiliar.limpar_terminal()
         
-        # Garante que o arquivo modelo exista a cada ciclo do menu
         if not os.path.exists(auxiliar.CapturarFile()):
             auxiliar.AbrirFile()
             
@@ -67,6 +66,7 @@ def main():
         print("  3. Transferência de Endereços  [3707]")
         print("  4. Transferência de Códigos    [1702]")
         print("  5. Transferência de Códigos    [1731]")
+        print("  6. Finalização de o.s          [1755]")
         print("  0. Sair\n")
         print("-" * largura)
         escolha = input(">> ").strip()
@@ -88,9 +88,13 @@ def main():
             time.sleep(1)
             
         elif escolha == "5":
-            print("Em construção") 
+            print("Em construção")
             time.sleep(1)
-            
+
+        elif escolha == "6":
+            BOT1755.FinalizarOS()
+            time.sleep(1)
+
         elif escolha == "0":
             print("Encerrando Hefesto...")
             caminho = auxiliar.CapturarFile()

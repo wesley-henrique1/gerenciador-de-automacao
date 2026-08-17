@@ -46,7 +46,7 @@ class TransferirPROD:
     def __init__(self, arquivo, largura):
         self.largura = largura
         self.valvula_salva = False
-        self.velocidade = 0.4
+        self.velocidade = 0.3
 
         lista_arquivos = [arquivo, Wms.endereco07]
         lista_saida = [OutPut.BotSave]

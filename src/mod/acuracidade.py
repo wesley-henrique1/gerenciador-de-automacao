@@ -1,216 +1,166 @@
-from ..lib.settings import Relatorios, Gestao, Wms, OutPut, ColNames
-from ..lib import ValidarErros, MonitorETL
-
 import datetime as dt
+from pathlib import Path
+
 import pandas as pd
 import numpy as np
-import os
 
-class auxiliar:
-    def organizar_df(self, df_original, col, id):
-        df = df_original
-        df[col] = pd.to_datetime(df[col], dayfirst= True).dt.normalize()
-        df['MES'] = df[col].dt.month
+from ..lib.settings import Relatorios, Wms, OutPut, ColNames
+from ..lib import ValidarErros, MonitorETL, Tratar286
 
-        if id == 1:
-            df = df[['NUMOS', 'DATA', 'CODROTINA', 'POSICAO', 'CODFUNCGER', 'FUNCGER','DTFIMOS', 'CODFUNCOS', 'FUNCOSFIM', 'Tipo O.S.', 'TIPOABAST', 'MES']].copy()
-            df = df.loc[(df['CODROTINA'] == 1709) | (df['CODROTINA'] == 1723)]
-            return df
-        elif id ==2: 
-            df = df[['DATAGERACAO', 'DTLANC', 'NUMBONUS', 'NUMOS', 'CODEMPILHADOR','EMPILHADOR', 'MES']].copy()
-            df = df.drop_duplicates(subset=['NUMOS'])
-            return df
-    def agrupar(self, df, col, id):
-        if id == 1:
-            temp = df.groupby(col).agg(
-                QTDE_OS = ("NUMOS", 'nunique'),
-                OS_50 = ("Tipo O.S.", lambda x: (x == '50 - Movimentação De Para').sum()),
-                OS_61 = ("Tipo O.S.", lambda x: (x == '61 - Movimentação De Para Horizontal').sum()),
-                OS_58 = ("Tipo O.S.", lambda x: (x == '58 - Transferencia de Para Vertical').sum())
-            ).reset_index()
-            return temp
-        elif id == 2:
-            temp = df.groupby(col).agg(
-                OS_RECEB = ("NUMOS", 'nunique')
-            ).reset_index()
-            return temp
-        elif id == 3:
-            temp = df.groupby(col).agg(
-                OS_RECEB = ('OS_RECEB', 'sum')
-            ).reset_index()
-            temp[col] = pd.to_datetime(temp[col], dayfirst= True).dt.normalize()
-            return temp
-        elif id == 4:
-            temp = df.groupby(col).agg(
-                QTDE_OS = ("QTDE_OS", 'sum'),
-                OS_50 = ("OS_50", 'sum'),
-                OS_61 = ("OS_61", 'sum'),
-                OS_58 = ("OS_58", 'sum')
-            ).reset_index()
-            temp[col] = pd.to_datetime(temp[col], dayfirst= True).dt.normalize()
-            return temp 
-        elif id == 5:
-            temp = df.groupby([col]).agg(
-                    TOTAL_BONUS = ("NUMBONUS", "nunique")
-                ).reset_index().sort_values(by=col, ascending= False)  
-            return temp 
-    def ajustar_numero(self,df_copia, coluna, tipo_dados):
-        def ajustar(valor):
-            if pd.isna(valor) or valor is None:
-                return 0.0
-            valor = str(valor).strip()
-            if isinstance(valor, str):
-                if valor.count('.') >= 1 and ',' in valor: 
-                    valor = valor.replace('.', '').replace(',', '.')
-                elif ',' in valor:
-                    valor = valor.replace(',', '.')
-            try:
-                if tipo_dados == int:
-                    return int(float(valor))
-                elif tipo_dados == float:
-                    return round(float(valor), 2)
-            except (ValueError, TypeError):
-                return 0.0
-        df_copia[coluna] = df_copia[coluna].apply(ajustar)
-        return df_copia
-class Acuracidade(auxiliar):
-    validador = ValidarErros(fonte="Acuracidade")
+class Auxiliar:
+    def converter_numero_seguro(self, val):
+        if isinstance(val, (int, float)):
+            return float(val) if pd.notna(val) else 0.0
+        
+        val_str = str(val).strip()
+        if val_str.lower() in ['nan', '', 'none']:
+            return 0.0
+        
+        if ',' in val_str and '.' in val_str:
+            val_str = val_str.replace('.', '').replace(',', '.')
+        elif ',' in val_str:
+            val_str = val_str.replace(',', '.')
+        elif val_str.count('.') > 1:
+            val_str = val_str.replace('.', '')
+            
+        try:
+            return float(val_str)
+        except ValueError:
+            return 0.0
+        except Exception as e:
+            if hasattr(self, 'validador'):
+                self.validador.registrar_log(e, "286_numeros")
+            return False
+class Acuracidade(Auxiliar):
+    validador = ValidarErros(fonte="Acuracidade")   
     def __init__(self):
-        self.list_path = [Gestao._286, Wms.gerencial07,Wms.endereco07,Relatorios._8596]
-        self.Retorno = [OutPut.Acuracidade]
+        self.ancora = Tratar286.BaseDados286()
         self.Instancia = MonitorETL()
+
+        self.ListaCaminhos = [Wms.gerencial07, Wms.endereco07, Relatorios._8596]
+        self.ListaCaminhos.extend(self.ancora.RetornoBase())
+        self.ListOutPut = [OutPut.Acuracidade]
+
+        self.pipeline()
 
     def pipeline(self):
         try:
             self.Instancia.stageTime('Extract')
-            df_bloq = pd.read_excel(self.list_path[0], usecols=['Código', 'Bloqueado(Qt.Bloq.-Qt.Avaria)','Qt.Avaria'])
-            end_ger = pd.read_csv(self.list_path[1], header= None, names= ColNames.Gerencial)  
-            df_end = pd.read_csv(self.list_path[2], header= None, names= ColNames.Endereco)
-            df_prod = pd.read_excel(self.list_path[3], usecols= ['CODPROD', 'QTUNITCX','QTTOTPAL'])
+            df_bloq = self.ancora.Pipeline()
+            end_ger = pd.read_csv(self.ListaCaminhos[0], header=None, names=ColNames.Gerencial)  
+            df_end = pd.read_csv(self.ListaCaminhos[1], header=None, names=ColNames.Endereco)
+            df_prod = pd.read_excel(self.ListaCaminhos[2], usecols=['CODPROD', 'QTUNITCX', 'QTTOTPAL'])
             self.Instancia.stageTime('Extract')
         except Exception as e:
             self.validador.registrar_log(e, "Extract")
             return False
         try:
             self.Instancia.stageTime('Transform')
-            dic_end_ger = {'COD' : "CODPROD"}
-            end_ger = end_ger.rename(columns= dic_end_ger)
+            
+            end_ger = end_ger.rename(columns={'COD': "CODPROD"})
             end_ger['RUA'] = end_ger['RUA'].fillna(0).astype(int)
 
-            dic_bloq = {'Código' : "CODPROD", 'Bloqueado(Qt.Bloq.-Qt.Avaria)' : "BLOQ", "Qt.Avaria": "AVARIA"}
-            df_bloq = df_bloq.rename(columns= dic_bloq).fillna(0)
-            df_bloq["BLOQUEADOS"] = df_bloq['BLOQ'] + df_bloq['AVARIA']
-            df_bloq['CODPROD'] = df_bloq['CODPROD'].astype(int)
-
-            dic_end = {"COD" : "CODPROD"}
-            df_end = df_end.rename(columns= dic_end)
-            df_end = df_end.loc[df_end['TIPO_PK'] == "AE"]
-            df_end = df_end[['CODPROD','ENTRADA', 'SAIDA', 'DISP','QTDE']]
+            df_end = df_end.rename(columns={"COD": "CODPROD"})
+            df_end = df_end[['CODPROD', 'ENTRADA', 'SAIDA', 'DISP', 'QTDE']].loc[df_end['TIPO_PK'] == "AE"]
             
-            col_ajuste = ['CODPROD','ENTRADA', 'SAIDA', 'DISP','QTDE']
-            for col in col_ajuste:
-                df_end = self.ajustar_numero(df_end, col, int)
+            cols_to_convert = ['CODPROD', 'ENTRADA', 'SAIDA', 'DISP', 'QTDE']
+            for col in cols_to_convert:
+                df_end[col] = df_end[col].apply(self.converter_numero_seguro)
             
             grupo_end = df_end.groupby('CODPROD').agg(
-                SAIDA = ('SAIDA', 'sum'),
-                ENTRADA = ('ENTRADA', 'sum'),
-                QT_DISP = ('DISP', 'sum'),
-                QTDE = ('QTDE', 'sum'),
+                SAIDA=('SAIDA', 'sum'),
+                ENTRADA=('ENTRADA', 'sum'),
+                QT_DISP=('DISP', 'sum'),
+                QTDE=('QTDE', 'sum'),
             ).reset_index()
 
             df_prod['CODPROD'] = df_prod['CODPROD'].fillna(0).astype(int)
 
-            df = end_ger.loc[end_ger['RUA'].between(1, 39)]
-            df = df.merge(df_bloq, left_on='CODPROD',right_on='CODPROD', how= 'left')
-            df = df.merge(grupo_end, left_on='CODPROD',right_on='CODPROD', how= 'left')
-            df = df.merge(df_prod, left_on='CODPROD',right_on='CODPROD', how= 'left')
-            drop_col = ['EMBALAGEM']
-            df.drop(columns= drop_col, inplace= True)
+            dfCompleto = end_ger.loc[end_ger['RUA'].between(1, 39)]
+            dfCompleto = dfCompleto.merge(df_bloq, on='CODPROD', how='left')
+            dfCompleto = dfCompleto.merge(grupo_end, on='CODPROD', how='left')
+            dfCompleto = dfCompleto.merge(df_prod, on='CODPROD', how='left')
 
-            col_ajuste = ['ENDERECO', 'GERENCIAL','PICKING','CAP','QTUNITCX','ENTRADA', 'SAIDA', 'QTDE', 'QT_DISP']
-            for col in col_ajuste:
-                df = self.ajustar_numero(df, col, float)
+            dfCompleto.drop(columns=['EMBALAGEM'], inplace=True)
 
-            df['DIF_UN'] = df['ENDERECO'] - df['GERENCIAL']
-            df['DIF_CX'] = round(df['DIF_UN'] / df['QTUNITCX'], 1)
-            df['ENDERECO'] = df['ENDERECO'] + df['ENTRADA']
-            df['CAP_CONVERTIDA'] = df['CAP'] * df['QTUNITCX']
-            df["STG_DISP"] =  df['GERENCIAL'] - df['BLOQUEADOS']
+            cols_metricas = ['ENDERECO', 'PICKING', 'CAP', 'QTUNITCX', 'ENTRADA', 'SAIDA', 'QTDE', 'QT_DISP']
+            for col in cols_metricas:
+                dfCompleto[col] = dfCompleto[col].apply(self.converter_numero_seguro)
 
-            for col in ['PICKING', 'CAP_CONVERTIDA', 'DIF_CX', 'DIF_UN','RUA', 'PREDIO', 'STG_DISP']:
-                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
-            # CRIAÇÃO DAS COLUNAS CATEGORIZADAS
+            dfCompleto['DIF_UN'] = dfCompleto['ENDERECO'] - dfCompleto['ESTOQUE']
+            dfCompleto['DIF_CX'] = round(dfCompleto['DIF_UN'] / dfCompleto['QTUNITCX'], 1)
+            dfCompleto['ENDERECO'] = dfCompleto['ENDERECO'] + dfCompleto['ENTRADA']
+            dfCompleto['CAP_CONVERTIDA'] = dfCompleto['CAP'] * dfCompleto['QTUNITCX']
 
-            df['VAL_ESTOQUE'] = np.where(
-                df['STG_DISP'].between(1, 40)
-                ,"VALIDAR"
-                ,"NORMAL"
-            )
-            df['PENDENCIA'] = np.where(
-                df['QTDE_O.S'] > 0
-                ,'FOLHA'
-                ,'INVENTARIO'
-            )
+            cols_numericas = ['PICKING', 'CAP_CONVERTIDA', 'DIF_CX', 'DIF_UN', 'RUA', 'PREDIO', 'DISPONIVEL']
+            for col in cols_numericas:
+                dfCompleto[col] = pd.to_numeric(dfCompleto[col], errors='coerce').fillna(0)
 
-            cond_dif = [
-                df['DIF_CX'] == 0,
-                # POSITIVO
-                (df['DIF_CX'] > 0) & (df['DIF_CX'] < 5),
-                (df['DIF_CX'] >= 5) & (df['DIF_CX'] < 10),
-                df['DIF_CX'] >= 10,
-                # NEGATIVO
-                (df['DIF_CX'] < 0) & (df['DIF_CX'] > -5),
-                (df['DIF_CX'] <= -5) & (df['DIF_CX'] > -10),
-                df['DIF_CX'] <= -10
-            ]
-            result_dif = [0, 1, 2, 3, -1, -2, -3]
-            df['CATEGORIA_DIF'] = np.select(cond_dif, result_dif, default=99)
+            # --- CRIAÇÃO DAS COLUNAS CATEGORIZADAS ---
+            try:
+                dfCompleto['VAL_ESTOQUE'] = np.where(dfCompleto['DISPONIVEL'].between(1, 40), "VALIDAR", "NORMAL")
+                dfCompleto['PENDENCIA'] = np.where(dfCompleto['QTDE_O.S'] > 0, 'FOLHA', 'INVENTARIO')
 
-            cond_op = [
-                df['DIF_UN'] < 0,
-                df['DIF_UN'] > 0,
-                df['DIF_UN'] == 0,
-            ]
-            result_op = ["END_MENOR", "END_MAIOR", "CORRETO"]
-            df["TIPO_OP"] = np.select(cond_op, result_op, default= "-")
+                cond_dif = [
+                    dfCompleto['DIF_CX'] == 0,
+                    (dfCompleto['DIF_CX'] > 0) & (dfCompleto['DIF_CX'] < 5),
+                    (dfCompleto['DIF_CX'] >= 5) & (dfCompleto['DIF_CX'] < 10),
+                    dfCompleto['DIF_CX'] >= 10,
+                    (dfCompleto['DIF_CX'] < 0) & (dfCompleto['DIF_CX'] > -5),
+                    (dfCompleto['DIF_CX'] <= -5) & (dfCompleto['DIF_CX'] > -10),
+                    dfCompleto['DIF_CX'] <= -10
+                ]
+                dfCompleto['CATEGORIA_DIF'] = np.select(cond_dif, [0, 1, 2, 3, -1, -2, -3], default=99)
 
-            cond_ap = [
-                df['PICKING'] > df['CAP_CONVERTIDA'],
-                df['PICKING'] < 0,
-                df['PICKING'] == 0
-            ]
-            result_ap = [
-                'AP_MAIOR'
-                ,"AP_NEGATIVO"
-                ,"CORRETO"
-            ]
-            df['AP_VS_CAP'] = np.select(cond_ap, result_ap, default= "-")
+                cond_op = [
+                    dfCompleto['DIF_UN'] < 0,
+                    dfCompleto['DIF_UN'] > 0,
+                    dfCompleto['DIF_UN'] == 0,
+                ]
+                dfCompleto["TIPO_OP"] = np.select(cond_op, ["END_MENOR", "END_MAIOR", "CORRETO"], default="-")
+
+                cond_ap = [
+                    dfCompleto['PICKING'] > dfCompleto['CAP_CONVERTIDA'],
+                    dfCompleto['PICKING'] < 0,
+                    dfCompleto['PICKING'] == 0
+                ]
+                dfCompleto['AP_VS_CAP'] = np.select(cond_ap, ['AP_MAIOR', "AP_NEGATIVO", "CORRETO"], default="-")
+                
+            except Exception as e:
+                self.validador.registrar_log(e, "T_Metricas")
+                return False
             
-            df_prod = df_prod.drop_duplicates(subset=None, keep='first')
-            df = df.sort_values(by=['RUA', 'PREDIO'], ascending= True)
-            self.Instancia.stageTime('Transform')
+            df_prod = df_prod.drop_duplicates(subset='CODPROD', keep='first')
+            dfCompleto = dfCompleto.sort_values(by=['RUA', 'PREDIO'], ascending=True)
+            self.Instancia.stageTime('Transform')  
         except Exception as e:
             self.validador.registrar_log(e, "Transform")
             return False
         try:
             self.Instancia.stageTime('Load')
-            with pd.ExcelWriter(self.Retorno[0]) as var:
-                df.to_excel(var, index= False, sheet_name= 'DIVERGENCIA')
+            dfCompleto = dfCompleto.drop(columns= ['DESC','GERENCIAL','DEP','NIVEL'])
+            with pd.ExcelWriter(self.ListOutPut[0]) as var:
+                dfCompleto.to_excel(var, index= False, sheet_name= 'DIVERGENCIA')
                 df_prod.to_excel(var, index= False, sheet_name= 'DIM_PROD')
+
             self.Instancia.stageTime('Load')
-            self.Instancia.conversor(Modulo= "Acuracidade")
+            self.Instancia.conversor(Modulo="Acuracidade")
             return True
         except Exception as e:
             self.validador.registrar_log(e, "Load")
             return False
+
     def carregamento(self, validar):
         lista_de_logs = []
+        ListRetorno = []
         try:
             if not validar:
-                return
-            for contador, path in enumerate(self.list_path, 1):
-                data_file = os.path.getmtime(path)
-                nome_file = os.path.basename(path)
+                return lista_de_logs, ListRetorno 
+                
+            for contador, Arquivo in enumerate(self.ListaCaminhos, 1):
+                Arquivo = Path(Arquivo)
+                data_file = Arquivo.stat().st_mtime
+                nome_file = Arquivo.name
 
                 data_modificacao = dt.datetime.fromtimestamp(data_file)
                 data_formatada = data_modificacao.strftime('%d/%m/%Y')
@@ -223,21 +173,24 @@ class Acuracidade(auxiliar):
                     ,"HORAS" : horas_formatada
                 }
                 lista_de_logs.append(dic_log)
-            dic_retorno = []
-            return lista_de_logs, dic_retorno
+                
+            return lista_de_logs, ListRetorno
         except Exception as e:
             self.validador.registrar_log(e, "CARREGAMENTO")
-            return False
+            return lista_de_logs, ListRetorno
     def outputLog(self, validar):
-        ListaOutPut = []
+        ListaOut = []
+        var = None
         try:
             if not validar:
-                return
-            for path in self.Retorno:
-                data_file = os.path.getmtime(path)
-                nome_file = os.path.basename(path)
-
-                data_modificacao = dt.datetime.fromtimestamp(data_file)
+                return ListaOut 
+                
+            for Arquivo in self.ListOutPut:
+                Arquivo = Path(Arquivo)
+                data_file = Arquivo.stat().st_mtime
+                nome_file = Arquivo.name
+                var = Arquivo
+                data_modificacao = dt.datetime.fromtimestamp(data_file) 
                 data_formatada = data_modificacao.strftime('%d/%m/%Y')
                 horas_formatada = data_modificacao.strftime('%H:%M:%S')
 
@@ -246,8 +199,9 @@ class Acuracidade(auxiliar):
                     "DATA": data_formatada,
                     "HORA": horas_formatada
                 }
-                ListaOutPut.append(Dicionario)
-            return ListaOutPut, path
+                ListaOut.append(Dicionario)
+            return ListaOut, var
+            
         except Exception as e:
             self.validador.registrar_log(e, "output")
-            return False
+            return ListaOut, Arquivo

@@ -1,11 +1,11 @@
-# from ..lib.settings import Relatorios, Wms, ColNames, OutPut, BaseDados
-# from ..lib import ValidarErros, MonitorETL
+from ..lib.settings import Relatorios, Wms, ColNames, OutPut, BaseDados
+from ..lib import ValidarErros, MonitorETL
 
-import sys
-from pathlib import Path
-sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
-from src.lib.settings import Relatorios, Wms, ColNames, OutPut, BaseDados
-from src.lib import ValidarErros, MonitorETL
+# import sys
+# from pathlib import Path
+# sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
+# from src.lib.settings import Relatorios, Wms, ColNames, OutPut, BaseDados
+# from src.lib import ValidarErros, MonitorETL
 
 import datetime as dt
 import pandas as pd
@@ -28,20 +28,24 @@ class auxiliar:
             return "VZ"
         
         return "FR"
-    def ajuste_numeros(self, data_frame, colunas):
-        for col in colunas:
-            data_frame[col] = (
-                data_frame[col]
-                .astype(str)
-                .str.replace(".", "", regex=False)
-                .str.replace(",", ".", regex=False)
-            )
-            data_frame[col] = (
-                pd.to_numeric(data_frame[col], errors="coerce")
-                .fillna(-1)
-                .astype(float)
-            )
-        return data_frame
+    def converter_numero_seguro(self, val):
+        if isinstance(val, (int, float)):
+            return float(val) if pd.notna(val) else 0.0
+            
+        val_str = str(val).strip()
+        if val_str.lower() in ['nan', '', 'none']:
+            return 0.0
+        
+        if ',' in val_str and '.' in val_str:
+            val_str = val_str.replace('.', '').replace(',', '.')
+        elif ',' in val_str:
+            val_str = val_str.replace(',', '.')
+        elif val_str.count('.') > 1:
+            val_str = val_str.replace('.', '')
+        try:
+            return float(val_str)
+        except ValueError:
+            return 0.0
 
     pass
 class MapaEstoque(auxiliar):
@@ -90,8 +94,8 @@ class MapaEstoque(auxiliar):
                 ,header= None
                 ,usecols= indices
                 ,names= [ColNames.Geral[i] for i in indices]
-                ,sep=','
-            )            
+                ,dtype= str
+            )    
             R_8596 = pd.read_excel(
                 self.list_path[1]
                 ,usecols= ['CODPROD',"RUA", 'ALTURAARM', 'QTUNITCX', "QTTOTPAL"]
@@ -99,12 +103,17 @@ class MapaEstoque(auxiliar):
             end_parado = pd.read_excel(self.list_path[2], sheet_name= 'AE', usecols= ['COD_END','TIPO'])
             self.Instancia.stageTime('Extract')
         except Exception as e:
+            print(e)
             self.validador.registrar_log(e, "Extract")
             return False
         try:
             self.Instancia.stageTime('Transform')
-            base_geral['QTDE'] = base_geral['QTDE'].astype(str).str.replace('.', '').str.replace(',', '.').astype(float)
-            base_geral['DISP_'] = base_geral['DISP_'].astype(str).str.replace('.', '').str.replace(',', '.').astype(float)
+            for coluna in ['QTDE','ENTRADA', 'SAIDA', 'DISP_']:
+                base_geral[coluna] = base_geral[coluna].apply(self.converter_numero_seguro).astype(float)
+                base_geral[coluna] = pd.to_numeric(base_geral[coluna], errors= 'raise')
+
+            for coluna in ['COD_END', 'RUA', 'PREDIO', 'NIVEL', 'APTO', 'CODPROD','LASTRO', 'CAMADA']:
+                base_geral[coluna] = pd.to_numeric(base_geral[coluna], errors= 'raise').astype(int)
 
             aereos_1707 = base_geral.loc[(base_geral['TIPO_END'] == "AE") & (~base_geral['RUA'].isin(self.VIRTUAIS))].copy()
             R_8596 = R_8596.loc[~R_8596['RUA'].isin(self.VIRTUAIS)]
@@ -287,8 +296,3 @@ class MapaEstoque(auxiliar):
         except Exception as e:
             self.validador.registrar_log(e, "output")
             return False
-
-
-if __name__ == "__main__":
-    instancia = MapaEstoque()
-    instancia.pipeline()
