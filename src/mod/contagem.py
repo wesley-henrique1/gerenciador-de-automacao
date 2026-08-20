@@ -27,8 +27,8 @@ class auxiliar:
         except ValueError:
             return 0.0
         
-class ContagemETL(auxiliar):
-    validador = ValidarErros(fonte="Mapa Estoque")
+class ContagemETL(auxiliar):    
+    validador = ValidarErros(fonte="Contagem INV")
     def __init__(self):
         self.ancora286 = BaseDados286()
         self.caminhoINV = Path(r"Z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\Wesley Henrique\base_inv")
@@ -54,7 +54,7 @@ class ContagemETL(auxiliar):
             
             dfInvetario = pd.concat(listaAR, axis= 0, ignore_index=True)
             estoque = self.ancora286.Pipeline(colcheck= col_286)
-            endereco = pd.read_csv(self.ListaCaminhos[0], header= None, names= ColNames.Endereco)
+            endereco = pd.read_csv(self.ListaCaminhos[0], header= None, names= ColNames.Endereco, dtype={'QTDE': str, 'DISP': str})
         except Exception as e:
             self.validador.registrar_log(e, "Extract")
             return False
@@ -74,6 +74,7 @@ class ContagemETL(auxiliar):
             dfCompleto = dfCompleto.drop(columns= ['Dep.', 'Nível', 'Descrição','TIPO_PK'])
             for coluna in ['ESTOQUE', 'DISPONIVEL', 'TOTALBLOQ', 'ENTRADA', 'SAIDA', 'DISP']:
                 dfCompleto[coluna] = dfCompleto[coluna].apply(self.converter_numero_seguro)
+            print(dfCompleto.info())
 
             dfCompleto = dfCompleto.fillna(value={'QTDE_AE': 0, 'END_AE': 0})
             dfCompleto['SaldoProd'] = dfCompleto['Inventário'] + dfCompleto['DISP'] 

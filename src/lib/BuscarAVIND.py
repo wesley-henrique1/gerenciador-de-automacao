@@ -12,7 +12,7 @@ class ConsolidarAVIND:
 
     def __init__(self):
         self.pastaIND = r'Z:\1 - CD Dia\4 - Equipe PCL\6.6 - Recuperação e Indenizado\6.6.2 - WMS - Controle Indenizado\2026\INDENIZADO QUINZENAL 2026'
-        self.FileAvaria = r'z:\1 - CD Dia\4 - Equipe PCL\6.6 - Recuperação e Indenizado\6.6.1 - WMS - Controle Avaria\2026\Controle de Bloqueados na avaria.xlsx'
+        self.FileAvaria = r'z:\1 - CD Dia\4 - Equipe PCL\6.6 - Recuperação e Indenizado\6.6.1 - WMS - Controle Avaria\2026\Controle de Bloqueados na avaria- Pos inv..xlsx'
 
         self.PontoPartida = None
         self.senhaIND = 'IND202501'
@@ -52,28 +52,23 @@ class ConsolidarAVIND:
 
             if not arquivos_encontrados:
                 return pd.DataFrame()
+                
             for next_ in arquivos_encontrados:
                 try:
                     nomeAR = os.path.basename(next_)
-                    with io.BytesIO() as gaveta:
-                        with open(next_, "rb") as arquivo:
-                            data = msoffcrypto.OfficeFile(arquivo)
-                            data.load_key(password=self.senhaIND)
-                            data.decrypt(gaveta)
+                    
+                    excel = pd.ExcelFile(next_)
+                    NameColunm = excel.sheet_names
 
-                        gaveta.seek(0)
-
-                        excel = pd.ExcelFile(gaveta)
-                        NameColunm = excel.sheet_names
-
-                        if self.Nome_Planilha in NameColunm:
-                            temporario = pd.read_excel(excel, sheet_name= self.Nome_Planilha, usecols=colunas)
-                            listnext.append(temporario)
-                            resumo.append({"Arquivo": nomeAR, "Total": temporario["COD PRODUTO"].nunique(), "Link": next_})
+                    if self.Nome_Planilha in NameColunm:
+                        temporario = pd.read_excel(excel, sheet_name=self.Nome_Planilha, usecols=colunas)
+                        listnext.append(temporario)
+                        
+                        resumo.append({"Arquivo": nomeAR, "Total": temporario["COD PRODUTO"].nunique(), "Link": next_})
+                        
                 except Exception as e:
                     print(f"Erro no arquivo {nomeAR}: {e}")
-                    resumo.append({"Arquivo": nomeAR, "Total": 0, "Link": e})
-
+                    resumo.append({"Arquivo": nomeAR, "Total": 0, "Link": str(e)})
             if listnext:
                 data = pd.concat(listnext, axis=0, ignore_index=True)
                 data = data.drop_duplicates()

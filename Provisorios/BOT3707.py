@@ -9,6 +9,7 @@ from src.lib import ValidarErros
 import pyautogui as pag
 import pyperclip as pc
 
+from datetime import datetime
 import pandas as pd
 import numpy as np
 import os
@@ -40,16 +41,32 @@ class auxiliar:
             pag.sleep(0.1)
             pc.copy(str_valor)
         return False
+    def exibir_info_arquivos(paths: list[str]) -> None:
+        """Exibe o cabeçalho padronizado com nome e data de modificação dos arquivos."""
+        print("=" * 60)
+        for caminho in paths:
+            if os.path.exists(caminho):
+                nome = os.path.basename(caminho)
+                timestamp = os.path.getmtime(caminho)
+                data_formatada = datetime.fromtimestamp(timestamp).strftime("%d/%m/%Y %H:%M:%S")
+                print(f"[ARQUIVO]: {nome}\n"
+                      f"[MODIFICADO EM]: {data_formatada}\n")
+            else:
+                print(f"[ALERTA]: Arquivo não encontrado -> {caminho}")
+        print("=" * 60 + "\n")
 
 class TransferirPROD:
     validador = ValidarErros(fonte="ContagemINV")
-    def __init__(self, arquivo, largura):
-        self.largura = largura
+    def __init__(self, arquivo):
+        self.largura = 71
         self.valvula_salva = False
         self.velocidade = 0.3
 
         lista_arquivos = [arquivo, Wms.endereco07]
         lista_saida = [OutPut.BotSave]
+        auxiliar.limpar_terminal()
+        auxiliar.exibir_info_arquivos(lista_arquivos)
+        input("Pressione [ENTER] para continuar...")
         self.ExecutarBot(listaPath= lista_arquivos, listaSave= lista_saida)
 
     def __Simulador(self, df: pd.DataFrame):
@@ -87,7 +104,6 @@ class TransferirPROD:
             return len(lista)
         except Exception as e:
             ValidarErros(e, etapa="simulador")
-
     def __pipeline(self, listaPath, listaSave):
         try:
             base_dados = pd.read_excel(listaPath[0], sheet_name= 'transf3707')
@@ -119,6 +135,7 @@ class TransferirPROD:
 
             Produtos = base_dados.merge(end, on= 'CODPROD', how= 'left').drop(columns= 'COD')
             Produtos = Produtos.merge(corte, left_on= "DESTINO", right_on= "CATEG_PK", how= "left")
+
             Produtos['CATEG_PK'] = np.where(Produtos['CATEG_PK'].notna(), "Ocupado", "Livre")
 
             dfProntos = Produtos.query("CATEG_PROD in ['Livre', 'Ocupado'] and CATEG_PK == 'Livre'").copy()
@@ -136,6 +153,7 @@ class TransferirPROD:
         except Exception as e:
             self.validador.registrar_log(e, "Load")
             return False
+
     def ExecutarBot(self,listaPath, listaSave):
         auxiliar.limpar_terminal()
         produtos = self.__pipeline(listaPath=listaPath, listaSave= listaSave)
