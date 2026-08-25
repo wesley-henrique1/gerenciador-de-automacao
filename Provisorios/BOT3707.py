@@ -9,9 +9,10 @@ from src.lib import ValidarErros
 import pyautogui as pag
 import pyperclip as pc
 
-from datetime import datetime
+from datetime import datetime,timedelta
 import pandas as pd
 import numpy as np
+import time
 import os
 
 class auxiliar:
@@ -60,7 +61,7 @@ class TransferirPROD:
     def __init__(self, arquivo):
         self.largura = 71
         self.valvula_salva = False
-        self.velocidade = 0.3
+        self.velocidade = 0.24
 
         lista_arquivos = [arquivo, Wms.endereco07]
         lista_saida = [OutPut.BotSave]
@@ -73,7 +74,9 @@ class TransferirPROD:
         try:
             lista = []
             total_itens = len(df)
+            inicio = time.perf_counter()
             for fase, (_, registro) in enumerate(df.iterrows(), 1):
+                pag.sleep( self.velocidade)
 
                 # --- ETAPA 1: Inserir Código do Produto ---
                 cod_prod = registro['CODPROD']
@@ -95,20 +98,26 @@ class TransferirPROD:
                 pag.sleep( self.velocidade)
 
                 for _ in range(3):
-                    pag.sleep( self.velocidade)
                     pag.press('enter')
 
                 # Sucesso do item atual
-                print(f"\rProgresso: [{fase}/{total_itens}] - Itens restantes: {total_itens - fase} ", end="", flush=True)
+                fim = time.perf_counter()
+                tempo_segundos = fim - inicio
+                print(
+                    f"\rProgresso: [{fase}/{total_itens}] - Itens restantes: {total_itens - fase} | {timedelta(seconds=int(tempo_segundos))}", 
+                    end="", flush=True)
                 lista.append(fase)
+
             return len(lista)
         except Exception as e:
+            print()
             ValidarErros(e, etapa="simulador")
     def __pipeline(self, listaPath, listaSave):
         try:
             base_dados = pd.read_excel(listaPath[0], sheet_name= 'transf3707')
             endereco = pd.read_csv(listaPath[1], header=None, names=ColNames.Endereco, dtype=str)
         except Exception as e:
+            print()
             self.validador.registrar_log(e, "Extract")
             return False  
         try:
@@ -141,16 +150,18 @@ class TransferirPROD:
             dfProntos = Produtos.query("CATEG_PROD in ['Livre', 'Ocupado'] and CATEG_PK == 'Livre'").copy()
             dfPendentes = Produtos.drop(dfProntos.index).copy()
         except Exception as e:
+            print()
             self.validador.registrar_log(e, "Transform")
             return False
         try:
-
+            dfProntos = dfProntos.drop_duplicates(subset= 'CODPROD', keep= "last")
             with pd.ExcelWriter(listaSave[0], engine= 'openpyxl') as var:
                 dfProntos.to_excel(var, sheet_name= "Transferidos", index= False)
                 dfPendentes.to_excel(var, sheet_name= "Pendencias", index= False)
                 self.valvula_salva = True
             return dfProntos
         except Exception as e:
+            print()
             self.validador.registrar_log(e, "Load")
             return False
 
@@ -163,7 +174,7 @@ class TransferirPROD:
             if self.valvula_salva:
                 resposta = input("\nArquivo gerado. Deseja abrir o relatório? (S/N): ").strip().upper()
                 if resposta in ["S", "SIM"]:
-                    os.startfile(OutPut.Jupyter_1)
+                    os.startfile(listaSave[0])
                     print("Arquivo aberto com sucesso!")
             else:
                 print("Nenhum arquivo gerado.")
@@ -182,8 +193,6 @@ class TransferirPROD:
 
         print("\n\n[STATUS] Automação em andamento...")
 
-        print(type(produtos))
-        print(produtos.head(3))
         VAR = self.__Simulador(df= produtos)
         if VAR == qtde: 
             print("\n\n")
@@ -201,6 +210,6 @@ class TransferirPROD:
         if self.valvula_salva:
             resposta = input("\nArquivo gerado. Deseja abrir o relatório? (S/N): ").strip().upper()
             if resposta in ["S", "SIM"]:
-                os.startfile(OutPut.Jupyter_1)
+                os.startfile(listaSave[0])
                 print("Arquivo aberto com sucesso!")
         pass
