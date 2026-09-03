@@ -16,6 +16,8 @@ class DownUp(auxiliar):
     def __init__(self):
         self.list_path = [Relatorios._8628, Relatorios._8596]
         self.Retorno = [OutPut.downUp]
+
+        self.func_chaves = ['ANTONIO EDILSON SOARES', 'ELEILSON FERNANDES DA SILVA', 'LUIZ HENRIQUE DE OLIVEIRA TRANQUEIA', 'MATHEUS EDUARDO DIAS SILVA']
         pass
 
     def pipeline(self):
@@ -33,7 +35,8 @@ class DownUp(auxiliar):
             ruasAtivas['PRODUTO'] = ruasAtivas['CODPROD'].astype(str) + " - " + ruasAtivas['DESCRICAO']
 
             dataBaixas['TIPO'] = dataBaixas['Tipo O.S.'].str.split('-').str[0].fillna(0).astype(int)
-            dataBaixas = dataBaixas.loc[~dataBaixas['FUNCGER'].isin(['ANTONIO EDILSON SOARES', 'ELEILSON FERNANDES DA SILVA', 'LUIZ HENRIQUE DE OLIVEIRA TRANQUEIA', 'MATHEUS EDUARDO DIAS SILVA'])]
+            dataBaixas = dataBaixas.loc[~dataBaixas['FUNCGER'].isin(self.func_chaves)]
+            
             corte = dataBaixas.loc[
                 (dataBaixas['CODROTINA'].isin([1723,1709])) 
                 & (dataBaixas['TIPO'] == 58) 
