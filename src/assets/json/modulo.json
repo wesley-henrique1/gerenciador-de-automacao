@@ -56,6 +56,13 @@
         "_classes": "ContagemETL",
         "_estado": "true"
     },
+    "_DownUPKeys":{
+        "_chave": "downUpKeys",
+        "_Nomeclatura": "Baixa vs Endereçado",
+        "_Modulo": "baixas_retorno",
+        "_classes": "DownUp",
+        "_estado": "true"
+    },
     
     "_FefoAbstKeys":{
         "_chave": "FefoAbstKeys",

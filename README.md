@@ -182,7 +182,10 @@ class auxiliar:
 class ModulosETL(auxiliar):
     validador = ValidarErros(fonte="Mapa Estoque")
     def __init__(self):
+        self.list_path = []
+        self.Retorno = []
         pass
+
     def pipeline(self):
         try:
             pass
@@ -204,7 +207,7 @@ class ModulosETL(auxiliar):
         lista_de_logs = []
         ListRetorno = []
         try:
-            if not validar:
+            if not validar or not self.list_path:
                 return lista_de_logs, ListRetorno 
                 
             for contador, Arquivo in enumerate(self.list_path, 1):
@@ -212,7 +215,7 @@ class ModulosETL(auxiliar):
                 data_file = Arquivo.stat().st_mtime
                 nome_file = Arquivo.name
 
-                data_modificacao = dt.datetime.fromtimestamp(data_file)
+                data_modificacao = dt.fromtimestamp(data_file)
                 data_formatada = data_modificacao.strftime('%d/%m/%Y')
                 horas_formatada = data_modificacao.strftime('%H:%M:%S')
 
@@ -232,15 +235,15 @@ class ModulosETL(auxiliar):
         ListaOutPut = []
         
         try:
-            if not validar:
-                return ListaOutPut 
-                
+            if not validar and not self.Retorno:
+                return ListaOutPut, "PULAR"
+                                
             for Arquivo in self.Retorno:
                 Arquivo = Path(Arquivo)
                 data_file = Arquivo.stat().st_mtime
                 nome_file = Arquivo.name
 
-                data_modificacao = dt.datetime.fromtimestamp(data_file) 
+                data_modificacao = dt.fromtimestamp(data_file) 
                 data_formatada = data_modificacao.strftime('%d/%m/%Y')
                 horas_formatada = data_modificacao.strftime('%H:%M:%S')
 
@@ -255,7 +258,7 @@ class ModulosETL(auxiliar):
             
         except Exception as e:
             self.validador.registrar_log(e, "output")
-            return ListaOutPut
+            return ListaOutPut, "PULAR"
         pass
 ```
 > 1.  `auxiliar` (Classe Auxiliar) <br>

@@ -1,5 +1,6 @@
 import sys
 import os 
+from pathlib import Path
 
 class __auxiliares__:
     if getattr(sys, "frozen", False):
@@ -11,7 +12,7 @@ class __auxiliares__:
         Diretorio = os.path.dirname(PastaModulos)
 
     DataBase = os.path.join(Diretorio, "database")
-    OutPut = os.path.join(Diretorio, "output")
+    OutPut = Path(r'Z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\output')
     source = os.path.join(Diretorio, 'src')
 
 class _Source(__auxiliares__):
@@ -118,21 +119,23 @@ class BaseDados(__auxiliares__):
     pass
 
 class OutPut(__auxiliares__):
-    InvSave = os.path.join(__auxiliares__.OutPut, 'Analitico_INV.xlsx')
-    BotSave = os.path.join(__auxiliares__.OutPut, 'Retorno_BOT.xlsx')
-    Baixas = os.path.join(__auxiliares__.OutPut, 'Analitico baixa.xlsx')
-    Cadastro = os.path.join(__auxiliares__.OutPut, 'Analitico cadastro.xlsx')
-    Corte = os.path.join(__auxiliares__.OutPut, 'Analitico corte.xlsx')
-    GiroStatus = os.path.join(__auxiliares__.OutPut, 'Giro_Status.xlsx')
-    MapaEstoque = os.path.join(__auxiliares__.OutPut, 'mapa_estoque.xlsx')
+    BotSave = __auxiliares__.OutPut / 'Retorno_BOT.xlsx'
 
-    Acuracidade = os.path.join(__auxiliares__.OutPut, 'BI_Acuracidade.xlsx')
-    Abastecimento = os.path.join(__auxiliares__.OutPut, 'BI_ABASTECIMENTO.xlsx')
+    downUp = __auxiliares__.OutPut / 'Analitico_DownUp.xlsx'
+    InvSave = __auxiliares__.OutPut / 'Analitico_INV.xlsx'
+    Baixas = __auxiliares__.OutPut / 'Analitico baixa.xlsx'
+    Cadastro = __auxiliares__.OutPut / 'Analitico cadastro.xlsx'
+    Corte = __auxiliares__.OutPut / 'Analitico corte.xlsx'
+    GiroStatus = __auxiliares__.OutPut / 'Giro_Status.xlsx'
+    MapaEstoque = __auxiliares__.OutPut / 'mapa_estoque.xlsx'
+
+    Acuracidade = __auxiliares__.OutPut / 'BI_Acuracidade.xlsx'
+    Abastecimento = __auxiliares__.OutPut / 'BI_ABASTECIMENTO.xlsx'
     
-    Jupyter_1 = os.path.join(__auxiliares__.OutPut, 'JUPYTER_1.xlsx')
-    Jupyter_2 = os.path.join(__auxiliares__.OutPut, 'JUPYTER_2.xlsx')
+    P_Acuracidade = __auxiliares__.OutPut / 'BI_ACURACIDADE'
 
-    P_Acuracidade = os.path.join(__auxiliares__.OutPut, 'BI_ACURACIDADE')
+    Jupyter_1 = __auxiliares__.OutPut / 'JUPYTER_1.xlsx'
+    Jupyter_2 = __auxiliares__.OutPut / 'JUPYTER_2.xlsx'
 
     Fefo8668 = r"z:\1 - CD Dia\4 - Equipe PCL\6.6 - Recuperação e Indenizado\6.6.3 - FEFO Validade\Curva A-B-C-D\Auditoria\FEFO_8668.xlsx"
     Fefo8628 = r"z:\1 - CD Dia\4 - Equipe PCL\6.6 - Recuperação e Indenizado\6.6.3 - FEFO Validade\Curva A-B-C-D\Auditoria\FEFO_8628.xlsx"
