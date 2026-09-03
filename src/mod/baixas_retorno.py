@@ -20,7 +20,7 @@ class DownUp(auxiliar):
 
     def pipeline(self):
         try:
-            col_baixas = ['DATA','NUMOS', 'CODPROD', 'ENDERECO_ORIG', 'NIVEL','NIVEL_1','RUA','RUA_1', 'CODROTINA', 'Tipo O.S.', 'QT']
+            col_baixas = ['DATA','NUMOS','FUNCGER', 'CODPROD', 'ENDERECO_ORIG', 'NIVEL','NIVEL_1','RUA','RUA_1', 'CODROTINA', 'Tipo O.S.', 'QT']
             col_dados = ['CODPROD', 'DESCRICAO', 'RUA', 'PREDIO', 'APTO', 'CAPACIDADE']
 
             dataBaixas = pd.read_excel(self.list_path[0], usecols= col_baixas)
@@ -33,6 +33,7 @@ class DownUp(auxiliar):
             ruasAtivas['PRODUTO'] = ruasAtivas['CODPROD'].astype(str) + " - " + ruasAtivas['DESCRICAO']
 
             dataBaixas['TIPO'] = dataBaixas['Tipo O.S.'].str.split('-').str[0].fillna(0).astype(int)
+            dataBaixas = dataBaixas.loc[~dataBaixas['FUNCGER'].isin(['ANTONIO EDILSON SOARES', 'ELEILSON FERNANDES DA SILVA', 'LUIZ HENRIQUE DE OLIVEIRA TRANQUEIA', 'MATHEUS EDUARDO DIAS SILVA'])]
             corte = dataBaixas.loc[
                 (dataBaixas['CODROTINA'].isin([1723,1709])) 
                 & (dataBaixas['TIPO'] == 58) 
