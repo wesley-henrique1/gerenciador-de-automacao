@@ -8,6 +8,8 @@ class auxiliar:
     def CapturarFile():
         nomeFile = 'ProvisorioFile.xlsx'
         pasta_script = os.path.dirname(os.path.abspath(__file__))
+
+        nomeBOT= ""
         return os.path.join(pasta_script, nomeFile)
 
     @staticmethod
@@ -24,7 +26,8 @@ class auxiliar:
                         'transferencia': ["CODPROD"],
                         "Retirada": ['CODPROD', 'DTULTENT', 'QTESTGER', 'OBSFL'],
                         'transf3707': ["CODPROD", "DESTINO"],
-                        'Etapa_3': ["CODPROD", "PL_LASTRO", "PL", "CAP", "QTEnd", "V_CAP"]
+                        'Etapa_3': ["CODPROD", "PL_LASTRO", "PL", "CAP", "QTEnd", "V_CAP"],
+                        'adiconarPK': ["CODPROD", "DESTINO", 'CAPACIDADE', 'PONTO_REP']
                     }
 
             with pd.ExcelWriter(caminho, engine='openpyxl') as writer:
@@ -61,8 +64,9 @@ def main():
         print("Escolha uma das opções abaixo:")
         print("1. Retirada de Endereços         [3706]")
         print("2. Ajuste de Capacidade          [3706]")
-        print("3. Transferência de Endereços    [3707]")
-        print("4. Finalização de o.s            [1755]")
+        print("3. Incluir piking venda          [3706]")
+        print("4. Transferência de Endereços    [3707]")
+        print("5. Finalização de o.s            [1755]")
         print("0. Sair\n")
         print("-" * largura)
         try:
@@ -77,9 +81,11 @@ def main():
                 BOT3706.RetirarEndereco(auxiliar.CapturarFile())
             case 2:
                 BOT3706.ProcessarCapacidade(largura)
-            case 3: 
-                BOT3707.TransferirPROD(auxiliar.CapturarFile())
+            case 3:
+                BOT3706.InserirEndereco(auxiliar.CapturarFile())
             case 4:
+                BOT3707.TransferirPROD(auxiliar.CapturarFile())
+            case 5:
                 BOT1755.FinalizarOS()
             case 0:
                 print("Encerrando Hefesto...")

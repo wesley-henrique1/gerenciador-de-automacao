@@ -2,30 +2,37 @@ from pathlib import Path
 import sys
 
 RAIZ = Path(__file__).resolve().parent.parent
-sys.path.append(str(RAIZ))
-from src.lib.settings import ColNames, OutPut, Wms
+sys.path.append(str(RAIZ)),
 
-import os
-from datetime import datetime
-import numpy as np
-import pandas as pd
-import pyautogui as pag
+from src.lib.settings import ColNames, OutPut, Wms, Relatorios
+from src.lib import ValidarErros
+
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning, message="Workbook contains no default style")
+
+from datetime import datetime,timedelta
+
 import pyperclip as pc
+import pyautogui as pag
+
+import pandas as pd
+import numpy as np
+import time
+import os
 
 
 class auxiliar:
     @staticmethod
-    def verificar_copy(valor: str | int | float, tentativas: int = 5) -> None:
-        """Copia o valor para o clipboard garantindo que o buffer do SO seja atualizado antes de colar."""
-        valor_str = str(valor)
-        pc.copy(valor_str)
-        pag.sleep(0.02)
-        count = 0
-        while pc.paste() != valor_str and count < tentativas:
-            pag.sleep(0.05)
-            pc.copy(valor_str)
-            count += 1
-        pag.hotkey("ctrl", "v")
+    def _copiar_e_validar(valor, tentativas=5):
+        """Garante que o valor foi devidamente copiado para a área de transferência."""
+        str_valor = str(valor)
+        pc.copy(str_valor)
+        for _ in range(tentativas):
+            if pc.paste() == str_valor:
+                return True
+            pag.sleep(0.1)
+            pc.copy(str_valor)
+        return False
 
     @staticmethod
     def limpar_terminal() -> None:
@@ -123,7 +130,6 @@ class RetirarEndereco:
             self.valvula_salva = False
 
         return codigos
-
     def executar_automacao(self, lista_path: list[str]):
         dados = self._pipeline(lista_path)
         if dados:
@@ -183,6 +189,163 @@ class RetirarEndereco:
             if resposta in ["S", "SIM"]:
                 os.startfile(OutPut.Jupyter_1)
                 print("Arquivo aberto com sucesso!")
+class InserirEndereco:
+    validador = ValidarErros(fonte="Inserir3606")
+    def __init__(self, arquivo= pd.DataFrame, largura= 70):
+        self.valvula = False
+        self.largura = largura
+        self.velocidade = 0.24
+
+        lista_arquivos = [arquivo,Relatorios._8596, Wms.endereco07]
+        lista_saida = [OutPut.BotSave]
+
+        self.ExecutarBot(listaPath= lista_arquivos, listaSave= lista_saida)
+        pass
+
+    def __Simulador(self, df: pd.DataFrame):
+        try:
+            lista = []
+            total_itens = len(df)
+            inicio = time.perf_counter()
+            for fase, (_, registro) in enumerate(df.iterrows(), 1):
+                pag.sleep( self.velocidade)
+
+                # --- ETAPA 1: Inserir Código do Produto ---
+                cod_prod = registro['CODPROD']
+                if not auxiliar._copiar_e_validar(cod_prod):
+                    print(f"\nErro ao copiar produto: {cod_prod}")
+                    continue
+                pag.hotkey("ctrl", "v")
+                pag.press('enter')
+
+                # --- ETAPA 2: Inserir Endereço ---
+                pag.sleep( self.velocidade)
+                destino = registro['DESTINO']
+                if not auxiliar._copiar_e_validar(destino):
+                    print(f"Erro ao copiar endereço: {destino}")
+                    continue
+                pag.hotkey("ctrl", "v")
+                pag.press('enter')
+
+                # --- ETAPA 3: Inserir Capacidade ---
+                pag.sleep( self.velocidade)
+                capacidade = registro['CAPACIDADE']
+                if not auxiliar._copiar_e_validar(capacidade):
+                    print(f"Erro ao copiar endereço: {capacidade}")
+                    continue
+                pag.hotkey("ctrl", "v")
+                pag.press('enter')
+
+                # --- ETAPA 4: Inserir Ponto de Reposiçõa ---
+                pag.sleep( self.velocidade)
+                ponto = registro['PONTO_REP']
+                if not auxiliar._copiar_e_validar(ponto):
+                    print(f"Erro ao copiar endereço: {ponto}")
+                    continue
+                pag.hotkey("ctrl", "v")
+                pag.press('enter')
+
+                # --- Finalizar e passar para o proximo
+                pag.sleep( self.velocidade)
+                pag.press('enter')
+                pag.press('enter')
+                
+                # Sucesso do item atual
+                fim = time.perf_counter()
+                tempo_segundos = fim - inicio
+                print(
+                    f"\rProgresso: [{fase}/{total_itens}] - Itens restantes: {total_itens - fase} | {timedelta(seconds=int(tempo_segundos))}", 
+                    end="", flush=True)
+                lista.append(fase)
+
+            return len(lista)
+        except Exception as e:
+            print()
+            ValidarErros(e, etapa="simulador")
+
+        pass
+    def __pipeline(self, listaPath: list[str], listaSave: list[str]):
+        try:
+            base = pd.read_excel(listaPath[0], sheet_name= 'adiconarPK')
+            dataProd = pd.read_excel(listaPath[1], usecols= ['CODPROD'])
+            dataEnd = pd.read_csv(listaPath[2], header= None, usecols=[0])
+
+        except Exception as e:
+            self.validador.registrar_log(e, "Extract")
+            return pd.DataFrame()
+        try:
+            comEnd = base['CODPROD'].isin(dataProd['CODPROD'])
+            comProd = base['DESTINO'].isin(dataEnd[0])
+
+            base["ANALISE"] =np.select([comEnd, comProd], ["PROD_COM_END", "END_COM_PROD"], default= "CORRETO")
+
+            processado = base.loc[base["ANALISE"]== 'CORRETO'].copy()
+            paraTratar = base.loc[base["ANALISE"]!= 'CORRETO'].copy()
+        except Exception as e:
+            self.validador.registrar_log(e, "Transform")
+            return pd.DataFrame()
+        try:
+            with pd.ExcelWriter(listaSave[0], engine= 'openpyxl') as var:
+                paraTratar.to_excel(var, sheet_name= "ParaTratar", index= False)
+                processado.to_excel(var, sheet_name= 'Processado', index= False)
+                self.valvula = True
+            
+            return processado
+        except Exception as e:
+            self.validador.registrar_log(e, "Load")
+            return pd.DataFrame()
+
+    def ExecutarBot(self, listaPath: list[str], listaSave: list[str]):
+        auxiliar.limpar_terminal()
+        auxiliar.exibir_info_arquivos(listaPath)
+        input("Pressione [ENTER] para continuar...")
+
+        produtos = self.__pipeline(listaPath= listaPath, listaSave= listaSave)
+
+        if produtos.empty:
+            print("Não foram encontrados produtos para transferência.")
+            if self.valvula:
+                resposta = input("\nArquivo gerado. Deseja abrir o relatório? (S/N): ").strip().upper()
+                if resposta in ["S", "SIM"]:
+                    os.startfile(listaSave[0])
+                    print("Arquivo aberto com sucesso!")
+            else:
+                print("Nenhum arquivo gerado.")
+            input("Pressione [ENTER] para continuar...")
+            return
+
+        qtde = produtos['CODPROD'].nunique()
+        print(f"Quantidade de produtos a serem transferido: {qtde}")
+        input("Pressione [ENTER] para continuar...")
+        auxiliar.limpar_terminal()
+        
+        print("\n[ATENÇÃO] Clique AGORA no primeiro campo onde a digitação deve iniciar!\n")
+        for segundos in range(5, 0, -1):
+            print(f"\rIniciando disparos em {segundos}s... NÃO MEXA NO MOUSE OU TECLADO!", end="", flush=True)
+            pag.sleep(1.0)
+
+        print("\n\n[STATUS] Automação em andamento...")
+
+        VAR = self.__Simulador(df= produtos)
+        if VAR == qtde: 
+            print("\n\n")
+            print("=" * self.largura)
+            print("[SUCESSO] O script finalizou as tentativas de processamento.")
+            input("\nPressione [ENTER] para fechar esta janela com segurança...")
+            print("=" * self.largura)
+        else:
+            print("\n\n")
+            print("=" * self.largura)
+            print(f"[PARCIAL] O script finalizou as tentativas de processamento | {VAR} itens.")
+            input("\nPressione [ENTER] para fechar esta janela com segurança...")
+            print("=" * self.largura)
+
+        if self.valvula:
+            resposta = input("\nArquivo gerado. Deseja abrir o relatório? (S/N): ").strip().upper()
+            if resposta in ["S", "SIM"]:
+                os.startfile(listaSave[0])
+                print("Arquivo aberto com sucesso!")
+
 
 class ProcessarCapacidade:
     def __init__(self, largura):
@@ -307,3 +470,4 @@ class ProcessarCapacidade:
         if retorno:
             print(">> Transferencia finalizada...")
         pass
+
