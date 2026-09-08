@@ -42,6 +42,7 @@ class ContagemETL(auxiliar):
     def pipeline(self):
         try:
             listaAR = []
+            listaBase = []
             col = ['Dep.', 'Rua', 'Prédio', 'Nível', 'Apto.', 'Código', 'Descrição', 'Inventário']
             col_286 = ['Código', 'Estoque', 'Qtde Pedida']
 
@@ -49,9 +50,12 @@ class ContagemETL(auxiliar):
                 if not arquivo.name.startswith("~$"):
                     df = pd.read_excel(arquivo, header= 1, usecols= col)
                     listaAR.append(df)
+                    listaBase.append(arquivo)
             if not listaAR:
                 return
             
+            self.ListaCaminhos.extend(listaBase)
+            print( self.ListaCaminhos)
             dfInvetario = pd.concat(listaAR, axis= 0, ignore_index=True)
             estoque = self.ancora286.Pipeline(colcheck= col_286)
             endereco = pd.read_csv(self.ListaCaminhos[0], header= None, names= ColNames.Endereco, dtype={'QTDE': str, 'DISP': str})
