@@ -3,6 +3,7 @@ from ..lib import ValidarErros, MonitorETL
 
 import datetime as dt
 import pandas as pd
+import numpy as np
 import glob
 import re
 import os 
@@ -237,8 +238,11 @@ class Corte(__auxiliares):
             self.noite['data_turno'] = pd.to_datetime(self.noite['data_turno'], format='%d-%m-%Y')
             self.divergencia['DATA'] = pd.to_datetime(self.divergencia['DATA'], format='%d-%m-%Y')
 
-            apresentar_final = self.dia.merge(self.noite, left_on='data',right_on='data_turno', how='left', suffixes=('_DIA', '_NOITE'))
+            apresentar_final = self.dia.merge(self.noite, left_on='data',right_on='data_turno', how='outer', suffixes=('_DIA', '_NOITE'))
+            apresentar_final['data'] = np.where(apresentar_final['data'].isna(),apresentar_final['data_turno'],apresentar_final['data'])
+
             apresentar_final = apresentar_final.merge(self.divergencia, left_on='data',right_on='DATA', how='left')
+            
             col_int = ["qtde_corte_DIA","qtde_corte_NOITE","qtde_item_DIA","qtde_item_NOITE", "QTDE_PED", "ped_imperfeito"]
             for col in col_int:
                 apresentar_final[col] = apresentar_final[col].fillna(0).astype(int)
