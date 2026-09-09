@@ -74,123 +74,147 @@ class auxiliar:
         print("=" * 71 + "\n")
 
 class RetirarEndereco:
-    def __init__(self, arquivo):
+    validador = ValidarErros(fonte="Retirar_B06")
+    def __init__(self, arquivo, largura):
+        self.valvula = False
+        self.largura = largura
+        self.velocidade = 0.24
+
         lista_arquivos = [arquivo, Wms.endereco07]
-        self.valvula_salva = False
-        auxiliar.limpar_terminal()
-        auxiliar.exibir_info_arquivos(lista_arquivos)
-        input("Pressione [ENTER] para continuar...")
-        self.executar_automacao(lista_arquivos)
+        lista_saida = [OutPut.BotSave]
+        self.ExecutarBot(list_extract= lista_arquivos, list_carga= lista_saida)
 
-    def _pipeline(self, lista_path: list[str]):
+    def __simulador(self, dataFrame: pd.DataFrame):
+        lista = []
+        total_itens = len(dataFrame)
+        inicio = time.perf_counter()
 
-        base_dados = pd.read_excel(lista_path[0], sheet_name="Retirada")
-        if base_dados.empty:
-            print("A aba 'Retirada' está vazia ou sem registros.")
-            return
-        endereco = pd.read_csv(lista_path[1], header=None, names=ColNames.Endereco, dtype=str)
+        for fase, (_,registro) in enumerate(dataFrame.iterrows(), 1):
+            pag.sleep(self.velocidade)
+            auxiliar._copiar_e_validar(registro['CODPROD'])
+            pag.hotkey("ctrl", "v")
+            
+            pag.sleep(self.velocidade)
+            pag.press("enter")
+            pag.press("tab")
+            pag.press("enter")
 
-        end = endereco.loc[endereco["TIPO_PK"] == "AP", ["COD", "TIPO_PK", "ENTRADA", "SAIDA", "DISP"]].copy()
-        for valor in ["ENTRADA", "SAIDA", "DISP"]:
-                end[valor] = end[valor].apply(auxiliar.ajuste_numeros)
+            for _ in range(7):
+                pag.press("tab")
+                pag.sleep(self.velocidade)
 
-        end["MOVI"] = end["ENTRADA"] + end["SAIDA"]
+            pag.press("enter")
+            pag.press("tab")
 
-        livre = (end["DISP"] == 0) & (end["MOVI"] == 0)
-        pendencias = end["MOVI"] > 0
-        ocupado = end["DISP"] > 0
-        negativado = end["DISP"] < 0
+            for _ in range(2):
+                pag.press("enter")
+                pag.sleep(self.velocidade)
 
-        end["CATEGORIAS"] = np.select(
-            [livre, pendencias, ocupado, negativado],
-            ["Livre", "Pendente", "Ocupado", "Negativado"],
-            default="Validar",
-        )
-        base_dados["CODPROD"] = pd.to_numeric(base_dados["CODPROD"], errors="coerce").fillna(0).astype(int)
-        end["CODPROD"] = pd.to_numeric(end["COD"], errors="coerce").fillna(0).astype(int)
+            pag.hotkey("shift", "tab")
+            pag.press("enter")
 
-        base_dados["DTULTENT"] = pd.to_datetime(base_dados["DTULTENT"], errors="coerce")
-
-        base = base_dados.merge(end, on="CODPROD", how='left').drop(columns=["COD", "TIPO_PK"])
-        corte_livre = base.loc[
-            (base["QTESTGER"] == 0)
-            & (base["OBSFL"] == "FL")
-            & (base["CATEGORIAS"] == "Livre")
-        ]
-
-        corte_resto = base.loc[~base["CODPROD"].isin(corte_livre["CODPROD"])]
-        codigos = corte_livre["CODPROD"].drop_duplicates().tolist()
+            fim = time.perf_counter()
+            tempo_segundos = fim - inicio
+            print(
+                f"\rProgresso: [{fase}/{total_itens}] - Itens restantes: {total_itens - fase} | {timedelta(seconds=int(tempo_segundos))}", 
+                end="", flush=True)
+            lista.append(fase)
+        print()
+        pass
+    def __pipeline(self, list_extract: list[str], list_carga: list[str]):
         try:
-            with pd.ExcelWriter(OutPut.Jupyter_1) as save:
+            dataBase = pd.read_excel(list_extract[0], sheet_name= "Retirada")
+            endereco = pd.read_csv(list_extract[1], header= None, names= ColNames.Endereco, dtype=str)
+        except Exception as e:
+            self.validador.registrar_log(e, "Extract")
+            return pd.DataFrame()
+        try:
+            Apartemantos = endereco.loc[endereco["TIPO_PK"] == "AP", ["COD", "TIPO_PK", "ENTRADA", "SAIDA", "DISP"]].copy()
+            Apartemantos["CODPROD"] = pd.to_numeric(Apartemantos["COD"], errors="coerce").fillna(0).astype(int)
+
+            for coluna in ["ENTRADA", "SAIDA", "DISP"]:
+                Apartemantos[coluna] = Apartemantos[coluna].apply(auxiliar.ajuste_numeros)
+            Apartemantos["MOVI"] = Apartemantos["ENTRADA"] + Apartemantos["SAIDA"]
+
+            livres = (Apartemantos["DISP"] == 0) & (Apartemantos["MOVI"] == 0)
+            pendencias = Apartemantos["MOVI"] > 0
+            ocupados = Apartemantos["DISP"] > 0
+            negativados = Apartemantos["DISP"] < 0
+
+            Apartemantos["__CATEGORIAS__"] = np.select(
+                [livres, pendencias, ocupados, negativados],
+                ["Livre", "Pendente", "Ocupado", "Negativado"],
+                default="Validar",
+            )
+
+            dataBase["CODPROD"] = pd.to_numeric(dataBase["CODPROD"], errors="coerce").fillna(0).astype(int)
+            dataBase["DTULTENT"] = pd.to_datetime(dataBase["DTULTENT"], errors="coerce")
+
+            dataConsolidado = dataBase.merge(Apartemantos, on="CODPROD", how='left').drop(columns=["COD", "TIPO_PK"])
+
+            corte_livre = dataConsolidado.loc[
+                (dataConsolidado["QTESTGER"] == 0)
+                & (dataConsolidado["OBSFL"] == "FL")
+                & (dataConsolidado["__CATEGORIAS__"] == "Livre")
+            ]
+            corte_resto = dataConsolidado.loc[~dataConsolidado["CODPROD"].isin(corte_livre["CODPROD"])]
+        except Exception as e:
+            self.validador.registrar_log(e, "Transform")
+            return pd.DataFrame()
+
+        try:
+            with pd.ExcelWriter(list_carga[0], engine='openpyxl') as save:
                 corte_livre.to_excel(save, sheet_name="RETIRADA", index=False)
                 corte_resto.to_excel(save, sheet_name="ValidarProd", index=False)
-                self.valvula_salva = True
-        except PermissionError:
-            print(f"\n[ERRO DE PERMISSÃO] Feche o arquivo '{OutPut.Jupyter_1}' no Excel antes de continuar!")
-            self.valvula_salva = False
+                self.valvula = True
+            return corte_livre
+        except Exception as e:
+            self.validador.registrar_log(e, "Load")
+            raise
 
-        return codigos
-    def executar_automacao(self, lista_path: list[str]):
-        dados = self._pipeline(lista_path)
-        if dados:
-            print(f"\nQuantidade de Produtos a serem processado: {len(dados)}\n")
-        input("Pressione [ENTER] para continuar...")
-
+    def ExecutarBot(self, list_extract: list[str], list_carga: list[str]):
         auxiliar.limpar_terminal()
-        trava = 0.2
+        auxiliar.exibir_info_arquivos(list_extract)
 
-        if dados:
-            print("\n[ATENÇÃO] Clique AGORA no primeiro campo onde a digitação deve iniciar!\n")
-            for segundos in range(5, 0, -1):
-                print(f"\rIniciando disparos em {segundos}s... NÃO MEXA NO MOUSE OU TECLADO!", end="", flush=True)
-                pag.sleep(1.0)
+        produtos = self.__pipeline(list_extract= list_extract, list_carga= list_carga)
+        if produtos.empty:
+            print(">>Não foram encontrados produtos para transferência.")
+            return
 
-            print("\n\n[STATUS] Automação em andamento...")
-            total = len(dados)
+        quantidade = produtos['CODPROD'].nunique()
+        print(f">>Quantidade de produtos a serem transferido: {quantidade}")
+        input(">>Pressione [ENTER] para continuar...")
+        auxiliar.limpar_terminal()
 
-            for fase, registro in enumerate(dados, 1):
-                auxiliar.verificar_copy(registro)
-                
-                # Sequência de atalhos e navegação
-                pag.press("enter")
-                pag.sleep(trava)
-                pag.press("tab")
-                pag.sleep(trava)
-                pag.press("enter")
-                pag.sleep(trava)
+        print("\n[ATENÇÃO] Clique AGORA no primeiro campo onde a digitação deve iniciar!\n")
+        for segundos in range(5, 0, -1):
+            print(f"\r>>Iniciando disparos em {segundos}s... NÃO MEXA NO MOUSE OU TECLADO!", end="", flush=True)
+            pag.sleep(1.0)
 
-                # Avançar 7 campos
-                for _ in range(7):
-                    pag.press("tab")
-                    pag.sleep(trava)
+        print("\n\n[STATUS] Automação em andamento...")
 
-                pag.press("enter")
-                pag.sleep(trava)
-                pag.press("tab")
-                pag.sleep(trava)
-
-                # Confirmar acões
-                for _ in range(2):
-                    pag.press("enter")
-                    pag.sleep(trava)
-
-                pag.hotkey("shift", "tab")
-                pag.sleep(trava)
-                pag.press("enter")
-                pag.sleep(trava)
-
-                print(f"\rProgresso: [{fase}/{total}] - Itens restantes: {total - fase} ", end="", flush=True)
-            print("\n\n[SUCESSO] Processo de retirada finalizado!")
+        VAR = self.__simulador(dataFrame= produtos)
+        if VAR == quantidade: 
+            print("\n\n")
+            print("=" * self.largura)
+            print("[SUCESSO] O script finalizou as tentativas de processamento.")
+            input("\n>>Pressione [ENTER] para fechar esta janela com segurança...")
+            print("=" * self.largura)
         else:
-            print("[AVISO] Nenhum registro válido encontrado para esta modalidade.")
+            print("\n\n")
+            print("=" * self.largura)
+            print(f"[PARCIAL] O script finalizou as tentativas de processamento | {VAR} itens.")
+            input("\n>>Pressione [ENTER] para fechar esta janela com segurança...")
+            print("=" * self.largura)
 
-        if self.valvula_salva:
+        if self.valvula:
             resposta = input("\nArquivo gerado. Deseja abrir o relatório? (S/N): ").strip().upper()
             if resposta in ["S", "SIM"]:
-                os.startfile(OutPut.Jupyter_1)
+                os.startfile(list_carga[0])
                 print("Arquivo aberto com sucesso!")
+    pass
 class InserirEndereco:
-    validador = ValidarErros(fonte="Inserir3606")
+    validador = ValidarErros(fonte="Inserir_B06")
     def __init__(self, arquivo= pd.DataFrame, largura= 70):
         self.valvula = False
         self.largura = largura
@@ -269,7 +293,6 @@ class InserirEndereco:
             base = pd.read_excel(listaPath[0], sheet_name= 'adiconarPK')
             dataProd = pd.read_excel(listaPath[1], usecols= ['CODPROD'])
             dataEnd = pd.read_csv(listaPath[2], header= None, usecols=[0])
-
         except Exception as e:
             self.validador.registrar_log(e, "Extract")
             return pd.DataFrame()
@@ -345,13 +368,12 @@ class InserirEndereco:
             if resposta in ["S", "SIM"]:
                 os.startfile(listaSave[0])
                 print("Arquivo aberto com sucesso!")
-
-
 class ProcessarCapacidade:
+    validador = ValidarErros(fonte="Capacidade_B06")
     def __init__(self, largura):
         self.largura = largura
         listaArquivos = [OutPut.Cadastro, Wms.endereco07]
-        self.velocidade = 0.4
+        self.velocidade = 0.24
 
         self.ExecutarBot(listaArquivos)
         pass
@@ -361,25 +383,34 @@ class ProcessarCapacidade:
         total = DataFrame['CODPROD'].nunique()
         listaTransf = []
         for fase, (indice, registro) in enumerate(DataFrame.iterrows(), 1):
-            pag.sleep( self.velocidade)
-            auxiliar.verificar_copy(registro["CODPROD"])
-            pag.press("enter")
-            pag.sleep( self.velocidade)
 
+            pag.sleep( self.velocidade)
+            cod_prod = registro['CODPROD']
+            if not auxiliar._copiar_e_validar(cod_prod):
+                print(f"\nErro ao copiar produto: {cod_prod}")
+                continue
+            pag.hotkey("ctrl", "v")
+
+            pag.press("enter")
             pag.press("tab")
-            pag.sleep( self.velocidade)
             pag.press("enter")
 
-            auxiliar.verificar_copy(registro[coluna])
-            pag.press("enter")
             pag.sleep( self.velocidade)
-
-            auxiliar.verificar_copy(registro["PONTO"])
-            pag.press("enter")
-            pag.sleep( self.velocidade)
+            col_cap = registro[coluna]
+            if not auxiliar._copiar_e_validar(col_cap):
+                print(f"\nErro ao copiar produto: {col_cap}")
+            pag.hotkey("ctrl", "v")
 
             pag.press("enter")
+
             pag.sleep( self.velocidade)
+            pontinho = registro["PONTO"]
+            if not auxiliar._copiar_e_validar(pontinho):
+                print(f"\nErro ao copiar produto: {pontinho}")
+            pag.hotkey("ctrl", "v")
+
+            pag.press("enter")
+            pag.press("enter")
 
             print(f"\rProgresso: [{fase}/{total}] - Itens restantes: {total - fase} ", end="", flush=True)
             listaTransf.append(registro["CODPROD"])

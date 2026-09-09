@@ -6,11 +6,8 @@ import pandas as pd
 import numpy as np
 import os
 import re
-"""
-    Sigla Produto, validar as sigla dos produtos se ele e UN ou PT e se esta de acordo com a sigla imposta 
-    UN/001/UN -> UN | CX/012/UN -> CX
-    V_SIGLA
-"""
+
+
 class auxiliar:
     def extrair_e_converter_peso(self,argumento):
         match = re.search(r'([\d\.,]+)\s*(KG|GR)', str(argumento), re.IGNORECASE)
@@ -26,7 +23,7 @@ class auxiliar:
 class Cadastro(auxiliar):
     validador = ValidarErros(fonte="Cadastro")
     def __init__(self):
-        locWEB = r'z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\WebCalibragem.xlsx'
+        locWEB = r'z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\_BaseDados\WebCalibragem.xlsx'
         self.list_path = [Relatorios._8596, BaseDados.EndFixo, locWEB]
         self.Retorno = [OutPut.Cadastro]
         self.chekout = [27, 28, 29, 31, 32, 33, 34, 35, 36, 37, 38, 39, 44]

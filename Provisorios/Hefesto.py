@@ -78,11 +78,11 @@ def main():
 
         match escolha:
             case 1:
-                BOT3706.RetirarEndereco(auxiliar.CapturarFile())
+                BOT3706.RetirarEndereco(auxiliar.CapturarFile(), largura)
             case 2:
                 BOT3706.ProcessarCapacidade(largura)
             case 3:
-                BOT3706.InserirEndereco(auxiliar.CapturarFile())
+                BOT3706.InserirEndereco(auxiliar.CapturarFile(), largura)
             case 4:
                 BOT3707.TransferirPROD(auxiliar.CapturarFile())
             case 5:
