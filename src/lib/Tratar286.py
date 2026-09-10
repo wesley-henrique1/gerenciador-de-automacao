@@ -2,7 +2,7 @@ import pandas as pd
 from .valerros import ValidarErros
 
 class BaseDados286:
-    validador = ValidarErros(fonte="main_logica")
+    validador = ValidarErros(fonte="Tratamento 286")
     def __init__(self):
         self.Ativos11 = r'z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\_BaseDados\286 - Estoque ATIVO11.xls'
         self.Ativos18 = r'z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\_BaseDados\286 - Estoque ATIVO18.xls'
@@ -40,7 +40,7 @@ class BaseDados286:
             self.validador.registrar_log(e, "286_numeros")
             return False
 
-    def Pipeline(self, colcheck= None):
+    def Pipeline(self, colcheck: list | None = None):
         try:
             if colcheck:
                 self.cols.extend(colcheck)

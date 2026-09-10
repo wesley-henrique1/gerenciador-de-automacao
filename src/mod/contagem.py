@@ -55,7 +55,7 @@ class ContagemETL(auxiliar):
                 return
             
             self.ListaCaminhos.extend(listaBase)
-            print( self.ListaCaminhos)
+            
             dfInvetario = pd.concat(listaAR, axis= 0, ignore_index=True)
             estoque = self.ancora286.Pipeline(colcheck= col_286)
             endereco = pd.read_csv(self.ListaCaminhos[0], header= None, names= ColNames.Endereco, dtype={'QTDE': str, 'DISP': str})
@@ -78,7 +78,6 @@ class ContagemETL(auxiliar):
             dfCompleto = dfCompleto.drop(columns= ['Dep.', 'Nível', 'Descrição','TIPO_PK'])
             for coluna in ['ESTOQUE', 'DISPONIVEL', 'TOTALBLOQ', 'ENTRADA', 'SAIDA', 'DISP']:
                 dfCompleto[coluna] = dfCompleto[coluna].apply(self.converter_numero_seguro)
-            print(dfCompleto.info())
 
             dfCompleto = dfCompleto.fillna(value={'QTDE_AE': 0, 'END_AE': 0})
             dfCompleto['SaldoProd'] = dfCompleto['Inventário'] + dfCompleto['DISP'] 
@@ -113,6 +112,11 @@ class ContagemETL(auxiliar):
             self.validador.registrar_log(e, "Transform")
             return False
         try:
+            etapa_1 = ['CODPROD','DESC','Rua', 'Prédio', 'Apto.',  'Inventário','SaldoProd']
+            etapa_2 = ['DISPONIVEL','ESTOQUE','PEDIDO', 'BLOQUEADO', 'AVARIA', 'TOTALBLOQ']
+            etapa_3 = ['ENTRADA', 'SAIDA', 'DISP', 'QTDE_AE', 'END_AE']
+            etapa_4 = [ 'Pendente','BaixoEST', 'CATEGORIA']
+            dfCompleto = dfCompleto[etapa_1 + etapa_2 + etapa_3 + etapa_4]
             dfCompleto.to_excel(self.ListOutPut[0], sheet_name= "Inventario", index= False)
             return True
         except Exception as e:
