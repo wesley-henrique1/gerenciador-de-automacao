@@ -31,9 +31,9 @@ class Cadastro(auxiliar):
         self.list_div = ['6-PRATELEIRA','5-TERCO (0,46)','4-TERCO (0,56)']
         self.list_meio = ['3-MEDIO (0,80)', '7-MEIO PALETE']
         
-        largura = 100
-        comprimento = 120
-        self.area_pl = (largura * comprimento) + 100
+        largura = 105
+        comprimento = 125
+        self.area_pl = largura * comprimento
         self.alturaPK = 175
         self.Instancia = MonitorETL()
 
@@ -95,8 +95,8 @@ class Cadastro(auxiliar):
                 df_PRODUTO['QTEnd'] = df_PRODUTO['TESTE'].map(df_PRODUTO['TESTE'].value_counts())
 
                 df_PRODUTO['AREA_LT'] = round((df_PRODUTO['LARGURAARM'] * df_PRODUTO['COMPRIMENTOARM']) * df_PRODUTO['LASTROPAL'],0)
-                df_PRODUTO['VolumeFRAC'] = df_PRODUTO['ALTURAM3'] * df_PRODUTO['LARGURAM3'] * df_PRODUTO['COMPRIMENTOM3']
-                df_PRODUTO['VolumeMaster'] = df_PRODUTO['ALTURAARM'] * df_PRODUTO['LARGURAARM'] * df_PRODUTO['COMPRIMENTOARM']
+                df_PRODUTO['VL_FRAC'] = df_PRODUTO['ALTURAM3'] * df_PRODUTO['LARGURAM3'] * df_PRODUTO['COMPRIMENTOM3']
+                df_PRODUTO['VL_MASTER'] = df_PRODUTO['ALTURAARM'] * df_PRODUTO['LARGURAARM'] * df_PRODUTO['COMPRIMENTOARM']
 
                 df_PRODUTO['GRAMATURA_GR'] = df_PRODUTO["DESCRICAO"].apply(self.extrair_e_converter_peso).fillna(0)
                 df_PRODUTO['PL_LASTRO'] = df_PRODUTO['PL'] + df_PRODUTO['LASTROPAL']
@@ -173,6 +173,7 @@ class Cadastro(auxiliar):
                     ,escolha
                     ,default= 'NORMAL'
                 )
+                print(self.area_pl)
 
                 df_PRODUTO['V_AREA'] = np.where(
                     df_PRODUTO['AREA_LT'] > self.area_pl
@@ -180,7 +181,7 @@ class Cadastro(auxiliar):
                     ,"NORMAL"
                 )
                 df_PRODUTO['V_VOLUME'] = np.where(
-                    (df_PRODUTO['VolumeFRAC'] * df_PRODUTO['FATOR']) > df_PRODUTO['VolumeMaster'],
+                    (df_PRODUTO['VL_FRAC'] * df_PRODUTO['FATOR']) > df_PRODUTO['VL_MASTER'],
                     "DIVERGENTE",
                     "NORMAL"
                 )
@@ -211,8 +212,8 @@ class Cadastro(auxiliar):
         try:
             self.Instancia.stageTime('Load')
 
-            ordem_primaria = ['CODPROD', 'DESCRICAO','OBS2', 'RUA', 'PREDIO', 'APTO', 'TIPO_RUA','CARACTERISTICA']
-            capacidade = ['FATOR','PL_LASTRO','PL','CAP', 'P_REP','QTEnd','FLEG_ABST','TIPOPK', 'ALTPL']
+            ordem_primaria = ['CODPROD', 'DESCRICAO','OBS2', 'RUA', 'PREDIO', 'APTO', 'TIPO_RUA','CARACTERISTICA','UNIDADEMASTER']
+            capacidade = ['FATOR','PL_LASTRO','PL','CAP', 'P_REP','QTEnd','FLEG_ABST','TIPOPK', 'ALTPL','AREA_LT','VL_FRAC','VL_MASTER']
             validar = ['V_SIGLA', 'V_CAP', 'V_FLEG', 'V_CARACT', 'V_TIPO_OS', 'V_AREA', 'V_VOLUME', 'V_PESO', 'V_RUA', 'STATUS_GERAL']
             ordem_completa = ordem_primaria + capacidade + validar
             df_final = df_PRODUTO[ordem_completa]
