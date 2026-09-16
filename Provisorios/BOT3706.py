@@ -127,6 +127,7 @@ class RetirarEndereco:
             endereco = pd.read_csv(list_extract[1], header= None, names= ColNames.Endereco, dtype=str)
         except Exception as e:
             self.validador.registrar_log(e, "Extract")
+            print(f"[Extract]\n {e}")
             return pd.DataFrame()
         try:
             Apartemantos = endereco.loc[endereco["TIPO_PK"] == "AP", ["COD", "TIPO_PK", "ENTRADA", "SAIDA", "DISP"]].copy()
@@ -160,6 +161,7 @@ class RetirarEndereco:
             corte_resto = dataConsolidado.loc[~dataConsolidado["CODPROD"].isin(corte_livre["CODPROD"])]
         except Exception as e:
             self.validador.registrar_log(e, "Transform")
+            print(f"[Transform]\n {e}")
             return pd.DataFrame()
 
         try:
@@ -170,7 +172,8 @@ class RetirarEndereco:
             return corte_livre
         except Exception as e:
             self.validador.registrar_log(e, "Load")
-            raise
+            print(f"[Load]\n {e}")
+            return pd.DataFrame()
 
     def ExecutarBot(self, list_extract: list[str], list_carga: list[str]):
         auxiliar.limpar_terminal()
@@ -179,6 +182,8 @@ class RetirarEndereco:
         produtos = self.__pipeline(list_extract= list_extract, list_carga= list_carga)
         if produtos.empty:
             print(">>Não foram encontrados produtos para transferência.")
+            print(type(produtos))
+            input(">>Pressione [ENTER] para continuar...")
             return
 
         quantidade = produtos['CODPROD'].nunique()

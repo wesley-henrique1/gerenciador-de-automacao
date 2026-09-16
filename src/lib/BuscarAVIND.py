@@ -12,7 +12,7 @@ class ConsolidarAVIND:
 
     def __init__(self):
         self.pastaIND = r'Z:\1 - CD Dia\4 - Equipe PCL\6.6 - Recuperação e Indenizado\6.6.2 - WMS - Controle Indenizado\2026\INDENIZADO QUINZENAL 2026'
-        self.FileAvaria = r'z:\1 - CD Dia\4 - Equipe PCL\6.6 - Recuperação e Indenizado\6.6.1 - WMS - Controle Avaria\2026\AVARIA\Controle de Bloqueados por avaria- Pos inv..xlsx'
+        self.FileAvaria = r'z:\1 - CD Dia\4 - Equipe PCL\6.6 - Recuperação e Indenizado\6.6.1 - WMS - Controle Avaria\2026\AVARIA\Controle de Bloqueados por avaria.xlsx'
 
         self.PontoPartida = None
         self.senhaIND = 'IND202501'
