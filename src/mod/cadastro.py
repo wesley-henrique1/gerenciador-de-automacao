@@ -108,7 +108,12 @@ class Cadastro(auxiliar):
                     ,"ACIMA"
                 )
                 df_PRODUTO['SPLIT_UN'] = df_PRODUTO['EMBALAGEM'].astype(str).str.split("/", expand=True)[0]
-                df_PRODUTO['Split_CX'] = df_PRODUTO['EMBALAGEMMASTER'].astype(str).str.split("/", expand= True)[0]
+
+                Split_CX = df_PRODUTO['EMBALAGEMMASTER'].astype(str).str.split("/", expand= True)
+                df_PRODUTO['Split_CX1'] = Split_CX[0]
+                df_PRODUTO['Split_CX2'] = Split_CX[1]
+
+
             except Exception as e:
                 self.validador.registrar_log(e, "T-SUPORTE")
             try:
@@ -122,11 +127,11 @@ class Cadastro(auxiliar):
                     ,escolha_STATUS
                     ,default="VAL"
                 )
-                
+                valFator = ((df_PRODUTO['Split_CX2'].astype(float) != df_PRODUTO['FATOR'].astype(float)))
                 "Condição das siglas"
-                valAmbas = (df_PRODUTO['Split_CX'] != df_PRODUTO['UNIDADEMASTER']) & (df_PRODUTO['SPLIT_UN'] != df_PRODUTO['UNIDADE'])
-                valCX = (df_PRODUTO['Split_CX'] != df_PRODUTO['UNIDADEMASTER']) & (df_PRODUTO['SPLIT_UN'] == df_PRODUTO['UNIDADE'])
-                valUN = (df_PRODUTO['SPLIT_UN'] != df_PRODUTO['UNIDADE']) & (df_PRODUTO['Split_CX'] == df_PRODUTO['UNIDADEMASTER'])
+                valAmbas = (df_PRODUTO['Split_CX1'] != df_PRODUTO['UNIDADEMASTER']) & (df_PRODUTO['SPLIT_UN'] != df_PRODUTO['UNIDADE'])
+                valCX = (df_PRODUTO['Split_CX1'] != df_PRODUTO['UNIDADEMASTER']) & (df_PRODUTO['SPLIT_UN'] == df_PRODUTO['UNIDADE'])
+                valUN = (df_PRODUTO['SPLIT_UN'] != df_PRODUTO['UNIDADE']) & (df_PRODUTO['Split_CX1'] == df_PRODUTO['UNIDADEMASTER'])
                 
                 "Condição da capacidade"
                 val_int1 = (df_PRODUTO['TIPOPK'] == "INT") & (df_PRODUTO['ALTPL'] == 'ABAIXO') & (df_PRODUTO['CAP'] < df_PRODUTO['PL_LASTRO']) & (df_PRODUTO['QTEnd'] > 1)
@@ -173,7 +178,10 @@ class Cadastro(auxiliar):
                     ,escolha
                     ,default= 'NORMAL'
                 )
-                print(self.area_pl)
+
+                df_PRODUTO['V_FATOR'] = np.where(
+                    valFator, "DIVERGENTE", "NORMAL"
+                )
 
                 df_PRODUTO['V_AREA'] = np.where(
                     df_PRODUTO['AREA_LT'] > self.area_pl
@@ -195,7 +203,7 @@ class Cadastro(auxiliar):
                     ,"ACIMA DA BANDEJA"
                     ,"NORMAL"
                 )
-                cols_kpi = ['V_SIGLA', 'V_CAP', 'V_FLEG', 'V_CARACT', 'V_TIPO_OS', 'V_AREA', 'V_VOLUME', 'V_PESO', 'V_RUA']
+                cols_kpi = ['V_SIGLA', 'V_CAP', 'V_FLEG', 'V_CARACT', 'V_TIPO_OS', 'V_AREA', 'V_VOLUME', 'V_PESO', 'V_RUA', 'V_FATOR']
                 
                 todas_normais = df_PRODUTO[cols_kpi].apply(
                     lambda col: col.astype(str).str.strip().str.upper() == 'NORMAL'
@@ -214,7 +222,7 @@ class Cadastro(auxiliar):
 
             ordem_primaria = ['CODPROD', 'DESCRICAO','OBS2', 'RUA', 'PREDIO', 'APTO', 'TIPO_RUA','CARACTERISTICA','UNIDADEMASTER']
             capacidade = ['FATOR','PL_LASTRO','PL','CAP', 'P_REP','QTEnd','FLEG_ABST','TIPOPK', 'ALTPL','AREA_LT','VL_FRAC','VL_MASTER']
-            validar = ['V_SIGLA', 'V_CAP', 'V_FLEG', 'V_CARACT', 'V_TIPO_OS', 'V_AREA', 'V_VOLUME', 'V_PESO', 'V_RUA', 'STATUS_GERAL']
+            validar = ['V_FATOR','V_SIGLA', 'V_CAP', 'V_FLEG', 'V_CARACT', 'V_TIPO_OS', 'V_AREA', 'V_VOLUME', 'V_PESO', 'V_RUA', 'STATUS_GERAL']
             ordem_completa = ordem_primaria + capacidade + validar
             df_final = df_PRODUTO[ordem_completa]
 
