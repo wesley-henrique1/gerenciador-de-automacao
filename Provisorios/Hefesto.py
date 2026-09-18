@@ -1,4 +1,5 @@
-import BOT3706, BOT3707, BOT1755
+import BOT3706, BOT3707, BOT1755, noname
+
 import os
 import time
 import pandas as pd 
@@ -87,6 +88,8 @@ def main():
                 BOT3707.TransferirPROD(auxiliar.CapturarFile())
             case 5:
                 BOT1755.FinalizarOS()
+            case 6:
+                lambda: noname
             case 0:
                 print("Encerrando Hefesto...")
                 if os.path.exists(auxiliar.CapturarFile()):

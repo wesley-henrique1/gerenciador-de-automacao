@@ -278,7 +278,7 @@ class JanelaPrincipal(auxiliar):
             ,highlightthickness= 3
         )
         self.conteudo_rotina = scrolledtext.ScrolledText(
-            self.frame_rotina
+             self.frame_rotina
             ,width=110, height=35
             ,font=("Consolas", 14)
         )

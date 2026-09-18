@@ -31,7 +31,7 @@ class ContagemETL(auxiliar):
     validador = ValidarErros(fonte="Contagem INV")
     def __init__(self):
         self.ancora286 = BaseDados286()
-        self.caminhoINV = Path(r"Z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\Wesley Henrique\base_inv")
+        self.caminhoINV = Path(r"Z:\1 - CD Dia\4 - Equipe PCL\6.1 - Inteligência Logística\6.6 - PCL Cadastro\Bruno Lima\base_inv")
         self.booleanoSave = False
 
         self.ListaCaminhos = [Wms.endereco07]
