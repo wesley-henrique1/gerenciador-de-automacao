@@ -46,7 +46,8 @@ class ContagemETL(auxiliar):
             col = ['Dep.', 'Rua', 'Prédio', 'Nível', 'Apto.', 'Código', 'Descrição', 'Inventário']
             col_286 = ['Código', 'Estoque', 'Qtde Pedida']
 
-            for arquivo in self.caminhoINV.glob("*xls*"):
+            for arquivo in self.caminhoINV.glob("INV*xls*"):
+                print(arquivo)
                 if not arquivo.name.startswith("~$"):
                     df = pd.read_excel(arquivo, header= 1, usecols= col)
                     listaAR.append(df)
@@ -58,6 +59,7 @@ class ContagemETL(auxiliar):
             
             dfInvetario = pd.concat(listaAR, axis= 0, ignore_index=True)
             estoque = self.ancora286.Pipeline(colcheck= col_286)
+            
             endereco = pd.read_csv(self.ListaCaminhos[0], header= None, names= ColNames.Endereco, dtype={'QTDE': str, 'DISP': str})
         except Exception as e:
             self.validador.registrar_log(e, "Extract")
@@ -80,7 +82,7 @@ class ContagemETL(auxiliar):
                 dfCompleto[coluna] = dfCompleto[coluna].apply(self.converter_numero_seguro)
 
             dfCompleto = dfCompleto.fillna(value={'QTDE_AE': 0, 'END_AE': 0})
-            dfCompleto['SaldoProd'] = dfCompleto['Inventário'] + dfCompleto['DISP'] 
+            dfCompleto['SaldoProd'] = dfCompleto['Inventário'] + dfCompleto['END_AE'] 
 
             try:
                 dfCompleto['Pendente'] = np.where(
@@ -112,11 +114,13 @@ class ContagemETL(auxiliar):
             self.validador.registrar_log(e, "Transform")
             return False
         try:
+            
             etapa_1 = ['CODPROD','DESC','Rua', 'Prédio', 'Apto.',  'Inventário','SaldoProd']
             etapa_2 = ['DISPONIVEL','ESTOQUE','PEDIDO', 'BLOQUEADO', 'AVARIA', 'TOTALBLOQ']
-            etapa_3 = ['ENTRADA', 'SAIDA', 'DISP', 'QTDE_AE', 'END_AE']
-            etapa_4 = [ 'Pendente','BaixoEST', 'CATEGORIA']
+            etapa_3 = ['QTDE_AE', 'END_AE']
+            etapa_4 = ['Pendente','BaixoEST', 'CATEGORIA']
             dfCompleto = dfCompleto[etapa_1 + etapa_2 + etapa_3 + etapa_4]
+            dfCompleto = dfCompleto.drop_duplicates(subset= 'CODPROD', keep= 'last')
             dfCompleto.to_excel(self.ListOutPut[0], sheet_name= "Inventario", index= False)
             return True
         except Exception as e:
